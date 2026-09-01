@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="eng">
+<html lang="az">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zaza IA Assistans </title>
+    <title>Zaza AI Helper</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
@@ -55,8 +55,8 @@
 <div class="chat-card">
     <div class="header">
         <div class="header-title">
-            <i class="fa-solid fa-wand-magic-sparkles"></i>
-            <h2>Gemini AI Assistant</h2>
+            <i class="fa-solid fa-robot"></i>
+            <h2>Zaza AI Helper</h2>
         </div>
         <div class="auth-actions">
             <button class="clear-btn" onclick="clearHistory()"><i class="fa-solid fa-trash"></i> Çatı Təmizlə</button>
@@ -83,11 +83,11 @@
                 <p>Kosmosda keçən qısa hekayə yaz.</p>
             </div>
         </div>
-        <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini cavab yazır...</div>
+        <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza cavab yazır...</div>
     </div>
 
     <div class="input-area">
-       <input type="text" id="user-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()">
+        <input type="text" id="user-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()">
         <button class="action-btn" id="mic-btn" onclick="toggleVoice()"><i class="fa-solid fa-microphone"></i></button>
         <button class="action-btn send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
@@ -170,7 +170,25 @@
     function clearHistory() {
         localStorage.removeItem("chatHistory");
         chatHistory = [];
-        location.reload();
+
+        let body = document.getElementById("chat-body");
+        body.innerHTML = `
+            <div class="suggestions" id="suggestions">
+                <div class="sug-card" onclick="quickSend('Nəzəriyyəyə görə kainat necə yaranıb?')">
+                    <h4>🌌 Kainatın Yaranması</h4>
+                    <p>Böyük Partlayış nəzəriyyəsi haqqında qısa məlumat ver.</p>
+                </div>
+                <div class="sug-card" onclick="quickSend('Python dilini öyrənməyə haradan başlamalıyam?')">
+                    <h4>💻 Programlaşdırma</h4>
+                    <p>Python öyrənmək üçün yol xəritəsi hazırla.</p>
+                </div>
+                <div class="sug-card" onclick="quickSend('Mənə maraqlı bir fantastik hekayə yaz.')">
+                    <h4>✍️ Yaradıcı Yazı</h4>
+                    <p>Kosmosda keçən qısa hekayə yaz.</p>
+                </div>
+            </div>
+            <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza cavab yazır...</div>
+        `;
     }
 
     let recognition;
