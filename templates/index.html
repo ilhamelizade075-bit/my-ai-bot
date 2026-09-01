@@ -1,4 +1,178 @@
-// Səsli Danışma (Brauzerin dili və ya ümumi dil dəstəyi ilə)
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini AI Assistant</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: radial-gradient(circle at top left, #1a1c29, #0e0f17); color: #e1e1e6; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        
+        .chat-card { width: 100%; max-width: 850px; height: 90vh; background: rgba(23, 25, 35, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .header { padding: 16px 20px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: space-between; }
+        .header-title { display: flex; align-items: center; gap: 12px; }
+        .header i { font-size: 24px; color: #7928CA; }
+        .header h2 { font-size: 20px; font-weight: 600; background: linear-gradient(135deg, #FF0080, #7928CA); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .auth-actions { display: flex; align-items: center; gap: 10px; }
+        .clear-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #a0a0b0; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+        .clear-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+
+        .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        
+        .suggestions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: auto; margin-bottom: auto; }
+        .sug-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        .sug-card:hover { background: rgba(255, 255, 255, 0.08); border-color: #7928CA; transform: translateY(-2px); }
+        .sug-card h4 { font-size: 14px; margin-bottom: 6px; color: #fff; }
+        .sug-card p { font-size: 12px; color: #a0a0b0; }
+
+        .msg { max-width: 80%; padding: 14px 18px; border-radius: 16px; line-height: 1.5; font-size: 15px; word-wrap: break-word; position: relative; }
+        .user { align-self: flex-end; background: linear-gradient(135deg, #7928CA, #FF0080); color: white; border-bottom-right-radius: 4px; }
+        .bot { align-self: flex-start; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; }
+
+        .speak-btn { margin-top: 6px; background: none; border: none; color: #a0a0b0; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+        .speak-btn:hover { color: #fff; }
+
+        .typing { display: none; align-self: flex-start; background: rgba(255, 255, 255, 0.03); padding: 12px 18px; border-radius: 16px; font-size: 13px; color: #a0a0b0; }
+
+        .input-area { padding: 16px; background: rgba(0, 0, 0, 0.2); border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; gap: 10px; align-items: center; }
+        input { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 14px 18px; border-radius: 12px; color: white; outline: none; font-size: 15px; }
+        input:focus { border-color: #7928CA; }
+        
+        .action-btn { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); width: 48px; height: 48px; border-radius: 12px; color: white; cursor: pointer; font-size: 16px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
+        .action-btn:hover { background: rgba(255, 255, 255, 0.15); }
+        .action-btn.recording { background: #FF0080; animation: pulse 1s infinite; }
+
+        .send-btn { background: linear-gradient(135deg, #7928CA, #FF0080); border: none; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="chat-card">
+    <div class="header">
+        <div class="header-title">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <h2>Gemini AI Assistant</h2>
+        </div>
+        <div class="auth-actions">
+            <button class="clear-btn" onclick="clearHistory()"><i class="fa-solid fa-trash"></i> Çatı Təmizlə</button>
+            <div id="g_id_onload"
+                 data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+                 data-callback="handleCredentialResponse">
+            </div>
+            <div class="g_id_signin" data-type="standard" data-size="small" data-theme="dark"></div>
+        </div>
+    </div>
+
+    <div class="chat-body" id="chat-body">
+        <div class="suggestions" id="suggestions">
+            <div class="sug-card" onclick="quickSend('Nəzəriyyəyə görə kainat necə yaranıb?')">
+                <h4>🌌 Kainatın Yaranması</h4>
+                <p>Böyük Partlayış nəzəriyyəsi haqqında qısa məlumat ver.</p>
+            </div>
+            <div class="sug-card" onclick="quickSend('Python dilini öyrənməyə haradan başlamalıyam?')">
+                <h4>💻 Programlaşdırma</h4>
+                <p>Python öyrənmək üçün yol xəritəsi hazırla.</p>
+            </div>
+            <div class="sug-card" onclick="quickSend('Mənə maraqlı bir fantastik hekayə yaz.')">
+                <h4>✍️ Yaradıcı Yazı</h4>
+                <p>Kosmosda keçən qısa hekayə yaz.</p>
+            </div>
+        </div>
+        <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini cavab yazır...</div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="Sualınızı bura yazın..." onkeydown="if(event.key==='Enter') sendMessage()">
+        <button class="action-btn" id="mic-btn" onclick="toggleVoice()"><i class="fa-solid fa-microphone"></i></button>
+        <button class="action-btn send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script>
+    let chatHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
+
+    window.onload = () => {
+        if (chatHistory.length > 0) {
+            let sug = document.getElementById("suggestions");
+            if (sug) sug.style.display = "none";
+            chatHistory.forEach(item => {
+                appendMessage(item.sender, item.text, false);
+            });
+        }
+    };
+
+    function appendMessage(sender, text, save = true) {
+        let body = document.getElementById("chat-body");
+        let sug = document.getElementById("suggestions");
+        let typing = document.getElementById("typing");
+
+        if (sug) sug.style.display = "none";
+
+        let msgDiv = document.createElement("div");
+        msgDiv.className = `msg ${sender}`;
+        
+        let formattedText = text.replace(/\n/g, '<br>');
+        msgDiv.innerHTML = formattedText;
+
+        if (sender === 'bot') {
+            let speakBtn = document.createElement("button");
+            speakBtn.className = "speak-btn";
+            speakBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Səsləndir`;
+            speakBtn.onclick = () => speakText(text);
+            msgDiv.appendChild(document.createElement("br"));
+            msgDiv.appendChild(speakBtn);
+        }
+
+        body.insertBefore(msgDiv, typing);
+        body.scrollTop = body.scrollHeight;
+
+        if (save) {
+            chatHistory.push({ sender, text });
+            localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+        }
+    }
+
+    async function sendMessage(textOverride = null) {
+        let input = document.getElementById("user-input");
+        let typing = document.getElementById("typing");
+        let text = textOverride || input.value.trim();
+
+        if (!text) return;
+
+        appendMessage("user", text);
+        if (!textOverride) input.value = "";
+
+        typing.style.display = "block";
+        document.getElementById("chat-body").scrollTop = document.getElementById("chat-body").scrollHeight;
+
+        try {
+            let res = await fetch("/chat", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({message: text})
+            });
+            let data = await res.json();
+            typing.style.display = "none";
+            appendMessage("bot", data.response);
+        } catch (e) {
+            typing.style.display = "none";
+            appendMessage("bot", "Xəta baş verdi, yenidən cəhd edin.");
+        }
+    }
+
+    function quickSend(text) { sendMessage(text); }
+
+    function clearHistory() {
+        localStorage.removeItem("chatHistory");
+        chatHistory = [];
+        location.reload();
+    }
+
     let recognition;
     function toggleVoice() {
         let micBtn = document.getElementById("mic-btn");
@@ -15,7 +189,6 @@
         }
 
         recognition = new SpeechRecognition();
-        // Dil təyin etmirik ki, brauzer istifadəçinin danışdığı dili avtomatik tutsun (və ya brauzer dilinə uyğunlaşsın)
         recognition.start();
 
         micBtn.classList.add("recording");
@@ -31,10 +204,17 @@
         recognition.onend = () => micBtn.classList.remove("recording");
     }
 
-    // Mətni Səsləndirmə (Avtomatik dil tənzimlənməsi)
     function speakText(text) {
         let synth = window.speechSynthesis;
         let utterance = new SpeechSynthesisUtterance(text);
-        // Avtomatik olaraq istifadəçinin sistem/səs dilinə uyğunlaşır
         synth.speak(utterance);
     }
+
+    function handleCredentialResponse(response) {
+        console.log("Encoded JWT ID token: " + response.credential);
+        alert("Google ilə uğurla daxil olundu!");
+    }
+</script>
+
+</body>
+</html>
