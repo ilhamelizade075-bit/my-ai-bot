@@ -4,29 +4,28 @@ from google import genai
 
 app = Flask(__name__)
 
-API_KEY = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=API_KEY)
+# Render mühitindən API Key-i oxuyur
+api_key = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key)
 
 @app.route("/")
-def home():
+def index():
     return render_template("index.html")
 
-@app.route("/api/chat", methods=["POST"])
+@app.route("/chat", methods=["POST"])
 def chat():
-    data = request.get_json()
-    user_message = data.get("message", "")
-
+    user_message = request.json.get("message", "")
     if not user_message:
-        return jsonify({"response": "Lütfən bir mesaj yazın."})
+        return jsonify({"response": "Zəhmət olmasa mesaj yazın."})
 
     try:
         response = client.models.generate_content(
-            model='gemini-3.6-flash',
-            contents=user_message
+            model="gemini-2.5-flash",
+            contents=user_message,
         )
         return jsonify({"response": response.text})
     except Exception as e:
         return jsonify({"response": f"Xəta baş verdi: {str(e)}"})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0", port=5000)
