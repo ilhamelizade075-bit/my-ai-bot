@@ -4,7 +4,6 @@ from google import genai
 
 app = Flask(__name__)
 
-# Render mühitindən API Key-i oxuyur
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
@@ -20,7 +19,7 @@ def chat():
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",
             contents=user_message,
         )
         return jsonify({"response": response.text})
@@ -28,4 +27,4 @@ def chat():
         return jsonify({"response": f"Xəta baş verdi: {str(e)}"})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000) 
+    app.run(host="0.0.0.0", port=5000)
