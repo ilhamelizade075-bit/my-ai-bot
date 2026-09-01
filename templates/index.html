@@ -3,48 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chatbot</title>
+    <title>Gemini AI Assistant</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; background: #121212; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .chat-container { width: 100%; max-width: 500px; background: #1e1e1e; border-radius: 10px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .chat-box { height: 350px; overflow-y: auto; border: 1px solid #333; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
-        .input-group { display: flex; gap: 10px; }
-        input { flex: 1; padding: 10px; border-radius: 5px; border: none; }
-        button { padding: 10px 15px; background: #075e54; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .msg { margin: 5px 0; padding: 8px; border-radius: 5px; }
-        .user { background: #075e54; align-self: flex-end; }
-        .bot { background: #333; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: radial-gradient(circle at top left, #1a1c29, #0e0f17); color: #e1e1e6; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        
+        .chat-card { width: 100%; max-width: 800px; height: 90vh; background: rgba(23, 25, 35, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .header { padding: 20px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; gap: 12px; }
+        .header i { font-size: 24px; color: #7928CA; }
+        .header h2 { font-size: 20px; font-weight: 600; background: linear-gradient(135deg, #FF0080, #7928CA); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        
+        /* Suggestions Grid */
+        .suggestions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: auto; margin-bottom: auto; }
+        .sug-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        .sug-card:hover { background: rgba(255, 255, 255, 0.08); border-color: #7928CA; transform: translateY(-2px); }
+        .sug-card h4 { font-size: 14px; margin-bottom: 6px; color: #fff; }
+        .sug-card p { font-size: 12px; color: #a0a0b0; }
+
+        /* Messages */
+        .msg { max-width: 80%; padding: 14px 18px; border-radius: 16px; line-height: 1.5; font-size: 15px; word-wrap: break-word; }
+        .user { align-self: flex-end; background: linear-gradient(135deg, #7928CA, #FF0080); color: white; border-bottom-right-radius: 4px; }
+        .bot { align-self: flex-start; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; }
+
+        .typing { display: none; align-self: flex-start; background: rgba(255, 255, 255, 0.03); padding: 12px 18px; border-radius: 16px; font-size: 13px; color: #a0a0b0; }
+
+        /* Input Area */
+        .input-area { padding: 16px; background: rgba(0, 0, 0, 0.2); border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; gap: 12px; }
+        input { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 14px 18px; border-radius: 12px; color: white; outline: none; font-size: 15px; }
+        input:focus { border-color: #7928CA; }
+        button { background: linear-gradient(135deg, #7928CA, #FF0080); border: none; padding: 0 24px; border-radius: 12px; color: white; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
-    <div class="chat-container">
-        <h2>Gemini AI Bot</h2>
-        <div class="chat-box" id="chat-box"></div>
-        <div class="input-group">
-            <input type="text" id="user-input" placeholder="Mesajınızı yazın...">
-            <button onclick="sendMessage()">Göndər</button>
-        </div>
+
+<div class="chat-card">
+    <div class="header">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <h2>Gemini AI Assistant</h2>
     </div>
 
-    <script>
-        async function sendMessage() {
-            let input = document.getElementById("user-input");
-            let box = document.getElementById("chat-box");
-            let text = input.value.trim();
-            if(!text) return;
+    <div class="chat-body" id="chat-body">
+        <div class="suggestions" id="suggestions">
+            <div class="sug-card" onclick="quickSend('Nəzəriyyəyə görə kainat necə yaranıb?')">
+                <h4>🌌 Kainatın Yaranması</h4>
+                <p>Böyük Partlayış nəzəriyyəsi haqqında qısa məlumat ver.</p>
+            </div>
+            <div class="sug-card" onclick="quickSend('Python dilini öyrənməyə haradan başlamalıyam?')">
+                <h4>💻 Programlaşdırma</h4>
+                <p>Python öyrənmək üçün yol xəritəsi hazırla.</p>
+            </div>
+            <div class="sug-card" onclick="quickSend('Mənə maraqlı bir fantastik hekayə yaz.')">
+                <h4>✍️ Yaradıcı Yazı</h4>
+                <p>Kosmosda keçən qısa hekayə yaz.</p>
+            </div>
+        </div>
+        <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Gemini cavab yazır...</div>
+    </div>
 
-            box.innerHTML += `<div class="msg user"><b>Siz:</b> ${text}</div>`;
-            input.value = "";
+    <div class="input-area">
+        <input type="text" id="user-input" placeholder="Sualınızı bura yazın..." onkeydown="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
 
+<script>
+    async function sendMessage(textOverride = null) {
+        let input = document.getElementById("user-input");
+        let body = document.getElementById("chat-body");
+        let sug = document.getElementById("suggestions");
+        let typing = document.getElementById("typing");
+
+        let text = textOverride || input.value.trim();
+        if (!text) return;
+
+        if (sug) sug.style.display = "none";
+
+        body.innerHTML += `<div class="msg user">${text}</div>`;
+        if (!textOverride) input.value = "";
+
+        body.appendChild(typing);
+        typing.style.display = "block";
+        body.scrollTop = body.scrollHeight;
+
+        try {
             let res = await fetch("/chat", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({message: text})
             });
             let data = await res.json();
-            box.innerHTML += `<div class="msg bot"><b>Bot:</b> ${data.response}</div>`;
-            box.scrollTop = box.scrollHeight;
+            typing.style.display = "none";
+            body.innerHTML += `<div class="msg bot">${data.response.replace(/\n/g, '<br>')}</div>`;
+        } catch (e) {
+            typing.style.display = "none";
+            body.innerHTML += `<div class="msg bot">Xəta baş verdi, yenidən cəhd edin.</div>`;
         }
-    </script>
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function quickSend(text) {
+        sendMessage(text);
+    }
+</script>
+
 </body>
 </html>
