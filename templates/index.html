@@ -12,7 +12,7 @@
         
         .main-container { width: 95%; max-width: 1200px; height: 90vh; background: rgba(23, 25, 35, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; display: flex; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
         
-        /* Sidebar Styles */
+        /* Sidebar */
         .sidebar { width: 280px; background: rgba(15, 16, 24, 0.6); border-right: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-direction: column; padding: 16px; gap: 12px; }
         .new-chat-btn { background: linear-gradient(135deg, #7928CA, #FF0080); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
         .new-chat-btn:hover { opacity: 0.9; transform: translateY(-1px); }
@@ -28,7 +28,7 @@
         .delete-chat-btn { color: #ff4d4d; opacity: 0; transition: 0.2s; background: none; border: none; cursor: pointer; }
         .chat-item:hover .delete-chat-btn { opacity: 1; }
 
-        /* Main Chat Card */
+        /* Main Chat */
         .chat-card { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .header { padding: 16px 20px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: space-between; }
         .header-title { display: flex; align-items: center; gap: 12px; }
@@ -74,7 +74,6 @@
 <body>
 
 <div class="main-container">
-    <!-- Sidebar -->
     <div class="sidebar">
         <button class="new-chat-btn" onclick="createNewChat()"><i class="fa-solid fa-plus"></i> New Chat</button>
         <div class="search-box">
@@ -84,7 +83,6 @@
         <div class="chat-list" id="chat-list"></div>
     </div>
 
-    <!-- Main Chat Card -->
     <div class="chat-card">
         <div class="header">
             <div class="header-title">
@@ -127,7 +125,7 @@
         </div>
 
         <div class="input-area">
-            <input type="text" id="user-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()">
+            <input type="text" id="user-input" placeholder="Type a message...">
             <button class="action-btn" id="mic-btn" onclick="toggleVoice()"><i class="fa-solid fa-microphone"></i></button>
             <button class="action-btn send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
@@ -140,6 +138,15 @@
 
     window.onload = () => {
         checkSavedUser();
+        
+        // Enter düyməsi ilə mesaj göndərmə
+        document.getElementById("user-input").addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
         if (allSessions.length === 0) {
             createNewChat(false);
         } else {
@@ -282,13 +289,11 @@
         let session = allSessions.find(s => s.id === currentSessionId);
         if (!session) return;
 
-        // Title yeniləmə
         if (session.messages.length === 0) {
             session.title = text.slice(0, 25) + (text.length > 25 ? "..." : "");
             renderSidebar();
         }
 
-        // İstafadəçi mesajı
         appendMessageToDOM("user", text);
         session.messages.push({ sender: "user", text });
         saveSessions();
@@ -300,50 +305,28 @@
         body.scrollTop = body.scrollHeight;
 
         try {
-            let response = await fetch("/chat", {
+            let res = await fetch("/chat", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({message: text})
             });
 
+            let data = await res.json();
             typing.style.display = "none";
 
-            let botMsgDiv = appendMessageToDOM("bot", "");
-            let fullText = "";
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                let chunk = decoder.decode(value, { stream: true });
-                fullText += chunk;
-
-                botMsgDiv.innerHTML = fullText.replace(/\n/g, '<br>');
-                body.scrollTop = body.scrollHeight;
-            }
-
-            let speakBtn = document.createElement("button");
-            speakBtn.className = "speak-btn";
-            speakBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Speak`;
-            speakBtn.onclick = () => speakText(fullText);
-            botMsgDiv.appendChild(document.createElement("br"));
-            botMsgDiv.appendChild(speakBtn);
-
-            session.messages.push({ sender: "bot", text: fullText });
+            appendMessageToDOM("bot", data.response);
+            session.messages.push({ sender: "bot", text: data.response });
             saveSessions();
 
         } catch (e) {
             typing.style.display = "none";
-            appendMessageToDOM("bot", "An error occurred, please try again.");
+            appendMessageToDOM("bot", "Xəta baş verdi, xahiş olunur yenidən cəhd edin.");
         }
     }
 
     function quickSend(text) { sendMessage(text); }
 
-    /* Google Login Logic */
+    /* Google Login */
     function parseJwt(token) {
         try {
             let base64Url = token.split('.')[1];
@@ -386,12 +369,12 @@
         document.getElementById("google-btn-container").style.display = "block";
     }
 
-    /* Voice logic */
+    /* Səs rejimi */
     let recognition;
     function toggleVoice() {
         let micBtn = document.getElementById("mic-btn");
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert("Your browser does not support speech recognition.");
+            alert("Brauzeriniz səs tanıma funksiyasını dəstəkləmir.");
             return;
         }
 
