@@ -1,5 +1,6 @@
 import os
-from flask import Flask, render_template, request, Response
+import time
+from flask import Flask, render_template, request, jsonify
 from google import genai
 
 app = Flask(__name__)
@@ -16,21 +17,20 @@ def chat():
     data = request.json or {}
     user_message = data.get("message", "")
     if not user_message:
-        return Response("Please type a message.", mimetype='text/plain')
+        return jsonify({"response": "Xahiş olunur mesaj yazın."})
 
-    def generate():
+    for attempt in range(3):
         try:
-            response = client.models.generate_content_stream(
+            response = client.models.generate_content(
                 model="gemini-3.6-flash",
                 contents=user_message,
             )
-            for chunk in response:
-                if chunk.text:
-                    yield chunk.text
+            return jsonify({"response": response.text})
         except Exception as e:
-            yield f"\n[Error: {str(e)}]"
-
-    return Response(generate(), mimetype='text/plain')
+            if "503" in str(e) and attempt < 2:
+                time.sleep(1)
+                continue
+            return jsonify({"response": f"Xəta baş verdi: {str(e)}"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
