@@ -172,15 +172,13 @@
 
         let msgDiv = document.createElement("div");
         msgDiv.className = `msg ${sender}`;
-        
-        let formattedText = text.replace(/\n/g, '<br>');
-        msgDiv.innerHTML = formattedText;
+        msgDiv.innerHTML = text.replace(/\n/g, '<br>');
 
         if (sender === 'bot') {
             let speakBtn = document.createElement("button");
             speakBtn.className = "speak-btn";
             speakBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Speak`;
-            speakBtn.onclick = () => speakText(text);
+            speakBtn.onclick = () => speakText(msgDiv.innerText.replace('Speak', ''));
             msgDiv.appendChild(document.createElement("br"));
             msgDiv.appendChild(speakBtn);
         }
@@ -192,6 +190,7 @@
             chatHistory.push({ sender, text });
             localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
         }
+        return msgDiv;
     }
 
     async function sendMessage(textOverride = null) {
@@ -205,17 +204,49 @@
         if (!textOverride) input.value = "";
 
         typing.style.display = "block";
-        document.getElementById("chat-body").scrollTop = document.getElementById("chat-body").scrollHeight;
+        let body = document.getElementById("chat-body");
+        body.scrollTop = body.scrollHeight;
 
         try {
-            let res = await fetch("/chat", {
+            let response = await fetch("/chat", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({message: text})
             });
-            let data = await res.json();
+
             typing.style.display = "none";
-            appendMessage("bot", data.response);
+
+            // Bot üçün boş mesaj div-i yaradırıq ki, canlı yazılsın
+            let botMsgDiv = appendMessage("bot", "", false);
+            let fullText = "";
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                let chunk = decoder.decode(value, { stream: true });
+                fullText += chunk;
+
+                // Mətni anında yeniləyirik
+                botMsgDiv.innerHTML = fullText.replace(/\n/g, '<br>');
+                body.scrollTop = body.scrollHeight;
+            }
+
+            // Səsləndirmə düyməsini əlavə edirik
+            let speakBtn = document.createElement("button");
+            speakBtn.className = "speak-btn";
+            speakBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Speak`;
+            speakBtn.onclick = () => speakText(fullText);
+            botMsgDiv.appendChild(document.createElement("br"));
+            botMsgDiv.appendChild(speakBtn);
+
+            // Tarixçəyə yaddan çıxarmadan yazırıq
+            chatHistory.push({ sender: "bot", text: fullText });
+            localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+
         } catch (e) {
             typing.style.display = "none";
             appendMessage("bot", "An error occurred, please try again.");
