@@ -8,24 +8,40 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: radial-gradient(circle at top left, #1a1c29, #0e0f17); color: #e1e1e6; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        body { background: radial-gradient(circle at top left, #1a1c29, #0e0f17); color: #e1e1e6; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         
-        .chat-card { width: 100%; max-width: 850px; height: 90vh; background: rgba(23, 25, 35, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .main-container { width: 95%; max-width: 1200px; height: 90vh; background: rgba(23, 25, 35, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; display: flex; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        
+        /* Sidebar Styles */
+        .sidebar { width: 280px; background: rgba(15, 16, 24, 0.6); border-right: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-direction: column; padding: 16px; gap: 12px; }
+        .new-chat-btn { background: linear-gradient(135deg, #7928CA, #FF0080); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+        .new-chat-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        
+        .search-box { position: relative; }
+        .search-box input { width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 8px 12px 8px 32px; border-radius: 8px; color: #fff; font-size: 13px; outline: none; }
+        .search-box i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #a0a0b0; font-size: 12px; }
+
+        .chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+        .chat-item { padding: 10px 12px; background: rgba(255, 255, 255, 0.02); border: 1px solid transparent; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #a0a0b0; transition: 0.2s; }
+        .chat-item:hover, .chat-item.active { background: rgba(255, 255, 255, 0.08); border-color: rgba(121, 40, 202, 0.4); color: #fff; }
+        .chat-item-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+        .delete-chat-btn { color: #ff4d4d; opacity: 0; transition: 0.2s; background: none; border: none; cursor: pointer; }
+        .chat-item:hover .delete-chat-btn { opacity: 1; }
+
+        /* Main Chat Card */
+        .chat-card { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .header { padding: 16px 20px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: space-between; }
         .header-title { display: flex; align-items: center; gap: 12px; }
         .header i { font-size: 24px; color: #7928CA; }
         .header h2 { font-size: 20px; font-weight: 600; background: linear-gradient(135deg, #FF0080, #7928CA); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         .auth-actions { display: flex; align-items: center; gap: 10px; }
-        .clear-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #a0a0b0; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; transition: 0.2s; }
-        .clear-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
-
         .user-profile { display: none; align-items: center; gap: 8px; background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
         .user-profile img { width: 28px; height: 28px; border-radius: 50%; }
         .user-profile span { font-size: 13px; color: #fff; font-weight: 500; }
         .logout-btn { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 12px; margin-left: 4px; }
 
-        .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+        .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
         
         .suggestions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: auto; margin-bottom: auto; }
         .sug-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
@@ -43,8 +59,8 @@
         .typing { display: none; align-self: flex-start; background: rgba(255, 255, 255, 0.03); padding: 12px 18px; border-radius: 16px; font-size: 13px; color: #a0a0b0; }
 
         .input-area { padding: 16px; background: rgba(0, 0, 0, 0.2); border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; gap: 10px; align-items: center; }
-        input { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 14px 18px; border-radius: 12px; color: white; outline: none; font-size: 15px; }
-        input:focus { border-color: #7928CA; }
+        .input-area input { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 14px 18px; border-radius: 12px; color: white; outline: none; font-size: 15px; }
+        .input-area input:focus { border-color: #7928CA; }
         
         .action-btn { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); width: 48px; height: 48px; border-radius: 12px; color: white; cursor: pointer; font-size: 16px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
         .action-btn:hover { background: rgba(255, 255, 255, 0.15); }
@@ -57,70 +73,277 @@
 </head>
 <body>
 
-<div class="chat-card">
-    <div class="header">
-        <div class="header-title">
-            <i class="fa-solid fa-robot"></i>
-            <h2>Zaza AI Helper</h2>
+<div class="main-container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <button class="new-chat-btn" onclick="createNewChat()"><i class="fa-solid fa-plus"></i> New Chat</button>
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="search-input" placeholder="Search chats..." oninput="filterChats()">
         </div>
-        <div class="auth-actions">
-            <button class="clear-btn" onclick="clearHistory()"><i class="fa-solid fa-trash"></i> Clear Chat</button>
-            
-            <div id="google-btn-container">
-                <div id="g_id_onload"
-                     data-client_id="152148942306-ur5oi5n29pvnmo44h19465tfue8rcih4.apps.googleusercontent.com"
-                     data-callback="handleCredentialResponse">
+        <div class="chat-list" id="chat-list"></div>
+    </div>
+
+    <!-- Main Chat Card -->
+    <div class="chat-card">
+        <div class="header">
+            <div class="header-title">
+                <i class="fa-solid fa-robot"></i>
+                <h2>Zaza AI Helper</h2>
+            </div>
+            <div class="auth-actions">
+                <div id="google-btn-container">
+                    <div id="g_id_onload"
+                         data-client_id="152148942306-ur5oi5n29pvnmo44h19465tfue8rcih4.apps.googleusercontent.com"
+                         data-callback="handleCredentialResponse">
+                    </div>
+                    <div class="g_id_signin" data-type="standard" data-size="medium" data-theme="dark" data-text="signin_with"></div>
                 </div>
-                <div class="g_id_signin" data-type="standard" data-size="medium" data-theme="dark" data-text="signin_with"></div>
-            </div>
 
-            <div id="user-profile" class="user-profile">
-                <img id="user-avatar" src="" alt="User">
-                <span id="user-name"></span>
-                <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+                <div id="user-profile" class="user-profile">
+                    <img id="user-avatar" src="" alt="User">
+                    <span id="user-name"></span>
+                    <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="chat-body" id="chat-body">
-        <div class="suggestions" id="suggestions">
-            <div class="sug-card" onclick="quickSend('How was the universe created?')">
-                <h4>🌌 Universe Creation</h4>
-                <p>Explain the Big Bang theory briefly.</p>
+        <div class="chat-body" id="chat-body">
+            <div class="suggestions" id="suggestions">
+                <div class="sug-card" onclick="quickSend('How was the universe created?')">
+                    <h4>🌌 Universe Creation</h4>
+                    <p>Explain the Big Bang theory briefly.</p>
+                </div>
+                <div class="sug-card" onclick="quickSend('How should I start learning Python?')">
+                    <h4>💻 Programming</h4>
+                    <p>Create a roadmap for learning Python.</p>
+                </div>
+                <div class="sug-card" onclick="quickSend('Write a short sci-fi story for me.')">
+                    <h4>✍️ Creative Writing</h4>
+                    <p>Write a short story set in outer space.</p>
+                </div>
             </div>
-            <div class="sug-card" onclick="quickSend('How should I start learning Python?')">
-                <h4>💻 Programming</h4>
-                <p>Create a roadmap for learning Python.</p>
-            </div>
-            <div class="sug-card" onclick="quickSend('Write a short sci-fi story for me.')">
-                <h4>✍️ Creative Writing</h4>
-                <p>Write a short story set in outer space.</p>
-            </div>
+            <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza is typing...</div>
         </div>
-        <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza is typing...</div>
-    </div>
 
-    <div class="input-area">
-        <input type="text" id="user-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()">
-        <button class="action-btn" id="mic-btn" onclick="toggleVoice()"><i class="fa-solid fa-microphone"></i></button>
-        <button class="action-btn send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMessage()">
+            <button class="action-btn" id="mic-btn" onclick="toggleVoice()"><i class="fa-solid fa-microphone"></i></button>
+            <button class="action-btn send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
     </div>
 </div>
 
 <script>
-    let chatHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
+    let allSessions = JSON.parse(localStorage.getItem("allSessions")) || [];
+    let currentSessionId = localStorage.getItem("currentSessionId") || null;
 
     window.onload = () => {
         checkSavedUser();
-        if (chatHistory.length > 0) {
-            let sug = document.getElementById("suggestions");
-            if (sug) sug.style.display = "none";
-            chatHistory.forEach(item => {
-                appendMessage(item.sender, item.text, false);
-            });
+        if (allSessions.length === 0) {
+            createNewChat(false);
+        } else {
+            if (!currentSessionId || !allSessions.find(s => s.id === currentSessionId)) {
+                currentSessionId = allSessions[0].id;
+            }
+            renderSidebar();
+            loadChatSession(currentSessionId);
         }
     };
 
+    function createNewChat(switchToIt = true) {
+        let newSession = {
+            id: 'session_' + Date.now(),
+            title: 'New Chat',
+            messages: []
+        };
+        allSessions.unshift(newSession);
+        saveSessions();
+        if (switchToIt) {
+            currentSessionId = newSession.id;
+            localStorage.setItem("currentSessionId", currentSessionId);
+            renderSidebar();
+            loadChatSession(currentSessionId);
+        }
+    }
+
+    function saveSessions() {
+        localStorage.setItem("allSessions", JSON.stringify(allSessions));
+    }
+
+    function renderSidebar(filterText = '') {
+        let chatList = document.getElementById("chat-list");
+        chatList.innerHTML = '';
+
+        allSessions.forEach(session => {
+            if (filterText && !session.title.toLowerCase().includes(filterText.toLowerCase())) return;
+
+            let div = document.createElement("div");
+            div.className = `chat-item ${session.id === currentSessionId ? 'active' : ''}`;
+            div.onclick = () => switchChat(session.id);
+
+            div.innerHTML = `
+                <span class="chat-item-title"><i class="fa-regular fa-message"></i> ${session.title}</span>
+                <button class="delete-chat-btn" onclick="deleteChat('${session.id}', event)"><i class="fa-solid fa-trash-can"></i></button>
+            `;
+            chatList.appendChild(div);
+        });
+    }
+
+    function switchChat(sessionId) {
+        currentSessionId = sessionId;
+        localStorage.setItem("currentSessionId", currentSessionId);
+        renderSidebar();
+        loadChatSession(sessionId);
+    }
+
+    function deleteChat(sessionId, e) {
+        e.stopPropagation();
+        allSessions = allSessions.filter(s => s.id !== sessionId);
+        saveSessions();
+        if (currentSessionId === sessionId) {
+            currentSessionId = allSessions.length > 0 ? allSessions[0].id : null;
+            if (!currentSessionId) {
+                createNewChat(true);
+                return;
+            }
+        }
+        renderSidebar();
+        loadChatSession(currentSessionId);
+    }
+
+    function filterChats() {
+        let text = document.getElementById("search-input").value;
+        renderSidebar(text);
+    }
+
+    function loadChatSession(sessionId) {
+        let session = allSessions.find(s => s.id === sessionId);
+        let body = document.getElementById("chat-body");
+        
+        body.innerHTML = `
+            <div class="suggestions" id="suggestions">
+                <div class="sug-card" onclick="quickSend('How was the universe created?')">
+                    <h4>🌌 Universe Creation</h4>
+                    <p>Explain the Big Bang theory briefly.</p>
+                </div>
+                <div class="sug-card" onclick="quickSend('How should I start learning Python?')">
+                    <h4>💻 Programming</h4>
+                    <p>Create a roadmap for learning Python.</p>
+                </div>
+                <div class="sug-card" onclick="quickSend('Write a short sci-fi story for me.')">
+                    <h4>✍️ Creative Writing</h4>
+                    <p>Write a short story set in outer space.</p>
+                </div>
+            </div>
+            <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza is typing...</div>
+        `;
+
+        if (session && session.messages.length > 0) {
+            document.getElementById("suggestions").style.display = "none";
+            session.messages.forEach(item => {
+                appendMessageToDOM(item.sender, item.text);
+            });
+        }
+    }
+
+    function appendMessageToDOM(sender, text) {
+        let body = document.getElementById("chat-body");
+        let sug = document.getElementById("suggestions");
+        let typing = document.getElementById("typing");
+
+        if (sug) sug.style.display = "none";
+
+        let msgDiv = document.createElement("div");
+        msgDiv.className = `msg ${sender}`;
+        msgDiv.innerHTML = text.replace(/\n/g, '<br>');
+
+        if (sender === 'bot') {
+            let speakBtn = document.createElement("button");
+            speakBtn.className = "speak-btn";
+            speakBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Speak`;
+            speakBtn.onclick = () => speakText(msgDiv.innerText.replace('Speak', ''));
+            msgDiv.appendChild(document.createElement("br"));
+            msgDiv.appendChild(speakBtn);
+        }
+
+        body.insertBefore(msgDiv, typing);
+        body.scrollTop = body.scrollHeight;
+        return msgDiv;
+    }
+
+    async function sendMessage(textOverride = null) {
+        let input = document.getElementById("user-input");
+        let typing = document.getElementById("typing");
+        let text = textOverride || input.value.trim();
+
+        if (!text) return;
+
+        let session = allSessions.find(s => s.id === currentSessionId);
+        if (!session) return;
+
+        // Title yeniləmə
+        if (session.messages.length === 0) {
+            session.title = text.slice(0, 25) + (text.length > 25 ? "..." : "");
+            renderSidebar();
+        }
+
+        // İstafadəçi mesajı
+        appendMessageToDOM("user", text);
+        session.messages.push({ sender: "user", text });
+        saveSessions();
+
+        if (!textOverride) input.value = "";
+
+        typing.style.display = "block";
+        let body = document.getElementById("chat-body");
+        body.scrollTop = body.scrollHeight;
+
+        try {
+            let response = await fetch("/chat", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({message: text})
+            });
+
+            typing.style.display = "none";
+
+            let botMsgDiv = appendMessageToDOM("bot", "");
+            let fullText = "";
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                let chunk = decoder.decode(value, { stream: true });
+                fullText += chunk;
+
+                botMsgDiv.innerHTML = fullText.replace(/\n/g, '<br>');
+                body.scrollTop = body.scrollHeight;
+            }
+
+            let speakBtn = document.createElement("button");
+            speakBtn.className = "speak-btn";
+            speakBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Speak`;
+            speakBtn.onclick = () => speakText(fullText);
+            botMsgDiv.appendChild(document.createElement("br"));
+            botMsgDiv.appendChild(speakBtn);
+
+            session.messages.push({ sender: "bot", text: fullText });
+            saveSessions();
+
+        } catch (e) {
+            typing.style.display = "none";
+            appendMessageToDOM("bot", "An error occurred, please try again.");
+        }
+    }
+
+    function quickSend(text) { sendMessage(text); }
+
+    /* Google Login Logic */
     function parseJwt(token) {
         try {
             let base64Url = token.split('.')[1];
@@ -163,122 +386,7 @@
         document.getElementById("google-btn-container").style.display = "block";
     }
 
-    function appendMessage(sender, text, save = true) {
-        let body = document.getElementById("chat-body");
-        let sug = document.getElementById("suggestions");
-        let typing = document.getElementById("typing");
-
-        if (sug) sug.style.display = "none";
-
-        let msgDiv = document.createElement("div");
-        msgDiv.className = `msg ${sender}`;
-        msgDiv.innerHTML = text.replace(/\n/g, '<br>');
-
-        if (sender === 'bot') {
-            let speakBtn = document.createElement("button");
-            speakBtn.className = "speak-btn";
-            speakBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Speak`;
-            speakBtn.onclick = () => speakText(msgDiv.innerText.replace('Speak', ''));
-            msgDiv.appendChild(document.createElement("br"));
-            msgDiv.appendChild(speakBtn);
-        }
-
-        body.insertBefore(msgDiv, typing);
-        body.scrollTop = body.scrollHeight;
-
-        if (save) {
-            chatHistory.push({ sender, text });
-            localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
-        }
-        return msgDiv;
-    }
-
-    async function sendMessage(textOverride = null) {
-        let input = document.getElementById("user-input");
-        let typing = document.getElementById("typing");
-        let text = textOverride || input.value.trim();
-
-        if (!text) return;
-
-        appendMessage("user", text);
-        if (!textOverride) input.value = "";
-
-        typing.style.display = "block";
-        let body = document.getElementById("chat-body");
-        body.scrollTop = body.scrollHeight;
-
-        try {
-            let response = await fetch("/chat", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({message: text})
-            });
-
-            typing.style.display = "none";
-
-            // Bot üçün boş mesaj div-i yaradırıq ki, canlı yazılsın
-            let botMsgDiv = appendMessage("bot", "", false);
-            let fullText = "";
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                let chunk = decoder.decode(value, { stream: true });
-                fullText += chunk;
-
-                // Mətni anında yeniləyirik
-                botMsgDiv.innerHTML = fullText.replace(/\n/g, '<br>');
-                body.scrollTop = body.scrollHeight;
-            }
-
-            // Səsləndirmə düyməsini əlavə edirik
-            let speakBtn = document.createElement("button");
-            speakBtn.className = "speak-btn";
-            speakBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Speak`;
-            speakBtn.onclick = () => speakText(fullText);
-            botMsgDiv.appendChild(document.createElement("br"));
-            botMsgDiv.appendChild(speakBtn);
-
-            // Tarixçəyə yaddan çıxarmadan yazırıq
-            chatHistory.push({ sender: "bot", text: fullText });
-            localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
-
-        } catch (e) {
-            typing.style.display = "none";
-            appendMessage("bot", "An error occurred, please try again.");
-        }
-    }
-
-    function quickSend(text) { sendMessage(text); }
-
-    function clearHistory() {
-        localStorage.removeItem("chatHistory");
-        chatHistory = [];
-
-        let body = document.getElementById("chat-body");
-        body.innerHTML = `
-            <div class="suggestions" id="suggestions">
-                <div class="sug-card" onclick="quickSend('How was the universe created?')">
-                    <h4>🌌 Universe Creation</h4>
-                    <p>Explain the Big Bang theory briefly.</p>
-                </div>
-                <div class="sug-card" onclick="quickSend('How should I start learning Python?')">
-                    <h4>💻 Programming</h4>
-                    <p>Create a roadmap for learning Python.</p>
-                </div>
-                <div class="sug-card" onclick="quickSend('Write a short sci-fi story for me.')">
-                    <h4>✍️ Creative Writing</h4>
-                    <p>Write a short story set in outer space.</p>
-                </div>
-            </div>
-            <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza is typing...</div>
-        `;
-    }
-
+    /* Voice logic */
     let recognition;
     function toggleVoice() {
         let micBtn = document.getElementById("mic-btn");
