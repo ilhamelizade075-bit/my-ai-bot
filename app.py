@@ -16,11 +16,12 @@ def index():
 def chat():
     user_message = request.json.get("message", "")
     if not user_message:
-        return jsonify({"response": "Zəhmət olmasa mesaj yazın."})
+        return jsonify({"response": "Please type a message."})
 
-    # Yüklənmə olduqda 3 dəfə yenidən cəhd etmə mexanizmi
     for attempt in range(3):
         try:
+            # Modelə birbaşa istifadəçi mesajını göndəririk.
+            # Gemini istifadəçinin dilini (Azərbaycan, Rus, İngilis və s.) avtomatik tanıyıb həmin dildə cavab verəcək.
             response = client.models.generate_content(
                 model="gemini-3.6-flash",
                 contents=user_message,
@@ -28,9 +29,9 @@ def chat():
             return jsonify({"response": response.text})
         except Exception as e:
             if "503" in str(e) and attempt < 2:
-                time.sleep(1)  # 1 saniyə gözləyib yenidən cəhd edir
+                time.sleep(1)
                 continue
-            return jsonify({"response": f"Xəta baş verdi: {str(e)}"})
+            return jsonify({"response": f"Error: {str(e)}"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
