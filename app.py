@@ -20,7 +20,6 @@ def chat():
 
     def generate():
         try:
-            # generate_content_stream cavabları parça-parça anında göndərir
             response = client.models.generate_content_stream(
                 model="gemini-3.6-flash",
                 contents=user_message,
@@ -29,7 +28,7 @@ def chat():
                 if chunk.text:
                     yield chunk.text
         except Exception as e:
-            yield f"\n[Xəta baş verdi: {str(e)}]"
+            yield f"\n[Error: {str(e)}]"
 
     return Response(generate(), mimetype='text/plain')
 
