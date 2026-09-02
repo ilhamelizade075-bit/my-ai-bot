@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="az">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,8 +17,13 @@
         .header h2 { font-size: 20px; font-weight: 600; background: linear-gradient(135deg, #FF0080, #7928CA); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
         .auth-actions { display: flex; align-items: center; gap: 10px; }
-        .clear-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #a0a0b0; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; }
+        .clear-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #a0a0b0; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; transition: 0.2s; }
         .clear-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+
+        .user-profile { display: none; align-items: center; gap: 8px; background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        .user-profile img { width: 28px; height: 28px; border-radius: 50%; }
+        .user-profile span { font-size: 13px; color: #fff; font-weight: 500; }
+        .logout-btn { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 12px; margin-left: 4px; }
 
         .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
         
@@ -59,31 +64,40 @@
             <h2>Zaza AI Helper</h2>
         </div>
         <div class="auth-actions">
-            <button class="clear-btn" onclick="clearHistory()"><i class="fa-solid fa-trash"></i> Çatı Təmizlə</button>
-            <div id="g_id_onload"
-                 data-client_id="152148942306-ur5oi5n29pvnmo44h19465tfue8rcih4.apps.googleusercontent.com"
-                 data-callback="handleCredentialResponse">
+            <button class="clear-btn" onclick="clearHistory()"><i class="fa-solid fa-trash"></i> Clear Chat</button>
+            
+            <div id="google-btn-container">
+                <div id="g_id_onload"
+                     data-client_id="152148942306-ur5oi5n29pvnmo44h19465tfue8rcih4.apps.googleusercontent.com"
+                     data-callback="handleCredentialResponse">
+                </div>
+                <div class="g_id_signin" data-type="standard" data-size="medium" data-theme="dark" data-text="signin_with"></div>
             </div>
-            <div class="g_id_signin" data-type="standard" data-size="small" data-theme="dark"></div>
+
+            <div id="user-profile" class="user-profile">
+                <img id="user-avatar" src="" alt="User">
+                <span id="user-name"></span>
+                <button class="logout-btn" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
         </div>
     </div>
 
     <div class="chat-body" id="chat-body">
         <div class="suggestions" id="suggestions">
-            <div class="sug-card" onclick="quickSend('Nəzəriyyəyə görə kainat necə yaranıb?')">
-                <h4>🌌 Kainatın Yaranması</h4>
-                <p>Böyük Partlayış nəzəriyyəsi haqqında qısa məlumat ver.</p>
+            <div class="sug-card" onclick="quickSend('How was the universe created?')">
+                <h4>🌌 Universe Creation</h4>
+                <p>Explain the Big Bang theory briefly.</p>
             </div>
-            <div class="sug-card" onclick="quickSend('Python dilini öyrənməyə haradan başlamalıyam?')">
-                <h4>💻 Programlaşdırma</h4>
-                <p>Python öyrənmək üçün yol xəritəsi hazırla.</p>
+            <div class="sug-card" onclick="quickSend('How should I start learning Python?')">
+                <h4>💻 Programming</h4>
+                <p>Create a roadmap for learning Python.</p>
             </div>
-            <div class="sug-card" onclick="quickSend('Mənə maraqlı bir fantastik hekayə yaz.')">
-                <h4>✍️ Yaradıcı Yazı</h4>
-                <p>Kosmosda keçən qısa hekayə yaz.</p>
+            <div class="sug-card" onclick="quickSend('Write a short sci-fi story for me.')">
+                <h4>✍️ Creative Writing</h4>
+                <p>Write a short story set in outer space.</p>
             </div>
         </div>
-        <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza cavab yazır...</div>
+        <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza is typing...</div>
     </div>
 
     <div class="input-area">
@@ -97,6 +111,7 @@
     let chatHistory = JSON.parse(localStorage.getItem("chatHistory")) || [];
 
     window.onload = () => {
+        checkSavedUser();
         if (chatHistory.length > 0) {
             let sug = document.getElementById("suggestions");
             if (sug) sug.style.display = "none";
@@ -105,6 +120,48 @@
             });
         }
     };
+
+    function parseJwt(token) {
+        try {
+            let base64Url = token.split('.')[1];
+            let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            let jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function handleCredentialResponse(response) {
+        const userData = parseJwt(response.credential);
+        if (userData) {
+            localStorage.setItem("googleUser", JSON.stringify(userData));
+            showUserProfile(userData);
+        }
+    }
+
+    function showUserProfile(user) {
+        document.getElementById("google-btn-container").style.display = "none";
+        const profileDiv = document.getElementById("user-profile");
+        document.getElementById("user-avatar").src = user.picture;
+        document.getElementById("user-name").innerText = user.given_name || user.name;
+        profileDiv.style.display = "flex";
+    }
+
+    function checkSavedUser() {
+        const savedUser = localStorage.getItem("googleUser");
+        if (savedUser) {
+            showUserProfile(JSON.parse(savedUser));
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem("googleUser");
+        document.getElementById("user-profile").style.display = "none";
+        document.getElementById("google-btn-container").style.display = "block";
+    }
 
     function appendMessage(sender, text, save = true) {
         let body = document.getElementById("chat-body");
@@ -122,7 +179,7 @@
         if (sender === 'bot') {
             let speakBtn = document.createElement("button");
             speakBtn.className = "speak-btn";
-            speakBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Səsləndir`;
+            speakBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Speak`;
             speakBtn.onclick = () => speakText(text);
             msgDiv.appendChild(document.createElement("br"));
             msgDiv.appendChild(speakBtn);
@@ -161,7 +218,7 @@
             appendMessage("bot", data.response);
         } catch (e) {
             typing.style.display = "none";
-            appendMessage("bot", "Xəta baş verdi, yenidən cəhd edin.");
+            appendMessage("bot", "An error occurred, please try again.");
         }
     }
 
@@ -174,20 +231,20 @@
         let body = document.getElementById("chat-body");
         body.innerHTML = `
             <div class="suggestions" id="suggestions">
-                <div class="sug-card" onclick="quickSend('Nəzəriyyəyə görə kainat necə yaranıb?')">
-                    <h4>🌌 Kainatın Yaranması</h4>
-                    <p>Böyük Partlayış nəzəriyyəsi haqqında qısa məlumat ver.</p>
+                <div class="sug-card" onclick="quickSend('How was the universe created?')">
+                    <h4>🌌 Universe Creation</h4>
+                    <p>Explain the Big Bang theory briefly.</p>
                 </div>
-                <div class="sug-card" onclick="quickSend('Python dilini öyrənməyə haradan başlamalıyam?')">
-                    <h4>💻 Programlaşdırma</h4>
-                    <p>Python öyrənmək üçün yol xəritəsi hazırla.</p>
+                <div class="sug-card" onclick="quickSend('How should I start learning Python?')">
+                    <h4>💻 Programming</h4>
+                    <p>Create a roadmap for learning Python.</p>
                 </div>
-                <div class="sug-card" onclick="quickSend('Mənə maraqlı bir fantastik hekayə yaz.')">
-                    <h4>✍️ Yaradıcı Yazı</h4>
-                    <p>Kosmosda keçən qısa hekayə yaz.</p>
+                <div class="sug-card" onclick="quickSend('Write a short sci-fi story for me.')">
+                    <h4>✍️ Creative Writing</h4>
+                    <p>Write a short story set in outer space.</p>
                 </div>
             </div>
-            <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza cavab yazır...</div>
+            <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza is typing...</div>
         `;
     }
 
@@ -195,7 +252,7 @@
     function toggleVoice() {
         let micBtn = document.getElementById("mic-btn");
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert("Brauzeriniz səs tanıma funksiyasını dəstəkləmir.");
+            alert("Your browser does not support speech recognition.");
             return;
         }
 
@@ -226,11 +283,6 @@
         let synth = window.speechSynthesis;
         let utterance = new SpeechSynthesisUtterance(text);
         synth.speak(utterance);
-    }
-
-    function handleCredentialResponse(response) {
-        console.log("Encoded JWT ID token: " + response.credential);
-        alert("Google ilə uğurla daxil olundu!");
     }
 </script>
 
