@@ -1,6 +1,5 @@
 import os
-import time
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, Response
 from google import genai
 
 app = Flask(__name__)
@@ -14,24 +13,25 @@ def index():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    user_message = request.json.get("message", "")
+    data = request.json or {}
+    user_message = data.get("message", "")
     if not user_message:
-        return jsonify({"response": "Please type a message."})
+        return Response("Please type a message.", mimetype='text/plain')
 
-    for attempt in range(3):
+    def generate():
         try:
-            # Modelə birbaşa istifadəçi mesajını göndəririk.
-            # Gemini istifadəçinin dilini (Azərbaycan, Rus, İngilis və s.) avtomatik tanıyıb həmin dildə cavab verəcək.
-            response = client.models.generate_content(
+            # generate_content_stream cavabları parça-parça anında göndərir
+            response = client.models.generate_content_stream(
                 model="gemini-3.6-flash",
                 contents=user_message,
             )
-            return jsonify({"response": response.text})
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
         except Exception as e:
-            if "503" in str(e) and attempt < 2:
-                time.sleep(1)
-                continue
-            return jsonify({"response": f"Error: {str(e)}"})
+            yield f"\n[Xəta baş verdi: {str(e)}]"
+
+    return Response(generate(), mimetype='text/plain')
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
