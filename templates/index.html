@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="az">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,13 +43,8 @@
 
         .chat-body { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
         
-        .suggestions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: auto; margin-bottom: auto; }
-        .sug-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); padding: 16px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
-        .sug-card:hover { background: rgba(255, 255, 255, 0.08); border-color: #7928CA; transform: translateY(-2px); }
-        .sug-card h4 { font-size: 14px; margin-bottom: 6px; color: #fff; }
-        .sug-card p { font-size: 12px; color: #a0a0b0; }
-
         .msg { max-width: 80%; padding: 14px 18px; border-radius: 16px; line-height: 1.5; font-size: 15px; word-wrap: break-word; position: relative; }
+        .msg img { max-width: 100%; max-height: 250px; border-radius: 10px; margin-bottom: 8px; display: block; }
         .user { align-self: flex-end; background: linear-gradient(135deg, #7928CA, #FF0080); color: white; border-bottom-right-radius: 4px; }
         .bot { align-self: flex-start; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.05); border-bottom-left-radius: 4px; }
 
@@ -58,9 +53,15 @@
 
         .typing { display: none; align-self: flex-start; background: rgba(255, 255, 255, 0.03); padding: 12px 18px; border-radius: 16px; font-size: 13px; color: #a0a0b0; }
 
+        /* File Preview Container */
+        .file-preview { display: none; padding: 8px 16px; background: rgba(255, 255, 255, 0.05); border-top: 1px solid rgba(255, 255, 255, 0.05); align-items: center; gap: 10px; }
+        .file-preview img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
+        .file-preview .file-info { font-size: 12px; color: #fff; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .file-preview .remove-file { color: #ff4d4d; cursor: pointer; background: none; border: none; font-size: 14px; }
+
         .input-area { padding: 16px; background: rgba(0, 0, 0, 0.2); border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; gap: 10px; align-items: center; }
-        .input-area input { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 14px 18px; border-radius: 12px; color: white; outline: none; font-size: 15px; }
-        .input-area input:focus { border-color: #7928CA; }
+        .input-area input[type="text"] { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 14px 18px; border-radius: 12px; color: white; outline: none; font-size: 15px; }
+        .input-area input[type="text"]:focus { border-color: #7928CA; }
         
         .action-btn { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); width: 48px; height: 48px; border-radius: 12px; color: white; cursor: pointer; font-size: 16px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
         .action-btn:hover { background: rgba(255, 255, 255, 0.15); }
@@ -107,26 +108,27 @@
         </div>
 
         <div class="chat-body" id="chat-body">
-            <div class="suggestions" id="suggestions">
-                <div class="sug-card" onclick="quickSend('How was the universe created?')">
-                    <h4>🌌 Universe Creation</h4>
-                    <p>Explain the Big Bang theory briefly.</p>
-                </div>
-                <div class="sug-card" onclick="quickSend('How should I start learning Python?')">
-                    <h4>💻 Programming</h4>
-                    <p>Create a roadmap for learning Python.</p>
-                </div>
-                <div class="sug-card" onclick="quickSend('Write a short sci-fi story for me.')">
-                    <h4>✍️ Creative Writing</h4>
-                    <p>Write a short story set in outer space.</p>
-                </div>
-            </div>
             <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza is typing...</div>
         </div>
 
+        <!-- Fayl Önizləmə Paneli -->
+        <div class="file-preview" id="file-preview">
+            <img id="preview-img" src="" alt="Preview" style="display:none;">
+            <i class="fa-solid fa-file" id="preview-icon" style="display:none; font-size: 24px; color: #7928CA;"></i>
+            <span class="file-info" id="file-info"></span>
+            <button class="remove-file" onclick="clearSelectedFile()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
         <div class="input-area">
-            <input type="text" id="user-input" placeholder="Type a message...">
-            <button class="action-btn" id="mic-btn" onclick="toggleVoice()"><i class="fa-solid fa-microphone"></i></button>
+            <!-- Gizli Fayl Seçici Input -->
+            <input type="file" id="file-input" style="display: none;" onchange="handleFileSelect(event)">
+            
+            <button class="action-btn" onclick="document.getElementById('file-input').click()" title="Fayl və ya Şəkil Əlavə Et">
+                <i class="fa-solid fa-paperclip"></i>
+            </button>
+
+            <input type="text" id="user-input" placeholder="Mesajınızı yazın...">
+            <button class="action-btn" id="mic-btn" onclick="toggleVoice()" title="Səslə Yaz"><i class="fa-solid fa-microphone"></i></button>
             <button class="action-btn send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
     </div>
@@ -135,11 +137,12 @@
 <script>
     let allSessions = JSON.parse(localStorage.getItem("allSessions")) || [];
     let currentSessionId = localStorage.getItem("currentSessionId") || null;
+    let selectedFileData = null;
+    let selectedFileType = null;
 
     window.onload = () => {
         checkSavedUser();
         
-        // Enter düyməsi ilə mesaj göndərmə
         document.getElementById("user-input").addEventListener("keydown", function(e) {
             if (e.key === "Enter") {
                 e.preventDefault();
@@ -228,42 +231,79 @@
         let session = allSessions.find(s => s.id === sessionId);
         let body = document.getElementById("chat-body");
         
-        body.innerHTML = `
-            <div class="suggestions" id="suggestions">
-                <div class="sug-card" onclick="quickSend('How was the universe created?')">
-                    <h4>🌌 Universe Creation</h4>
-                    <p>Explain the Big Bang theory briefly.</p>
-                </div>
-                <div class="sug-card" onclick="quickSend('How should I start learning Python?')">
-                    <h4>💻 Programming</h4>
-                    <p>Create a roadmap for learning Python.</p>
-                </div>
-                <div class="sug-card" onclick="quickSend('Write a short sci-fi story for me.')">
-                    <h4>✍️ Creative Writing</h4>
-                    <p>Write a short story set in outer space.</p>
-                </div>
-            </div>
-            <div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza is typing...</div>
-        `;
+        body.innerHTML = `<div class="typing" id="typing"><i class="fa-solid fa-circle-notch fa-spin"></i> Zaza is typing...</div>`;
 
         if (session && session.messages.length > 0) {
-            document.getElementById("suggestions").style.display = "none";
             session.messages.forEach(item => {
-                appendMessageToDOM(item.sender, item.text);
+                appendMessageToDOM(item.sender, item.text, item.fileData);
             });
         }
     }
 
-    function appendMessageToDOM(sender, text) {
-        let body = document.getElementById("chat-body");
-        let sug = document.getElementById("suggestions");
-        let typing = document.getElementById("typing");
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
 
-        if (sug) sug.style.display = "none";
+        selectedFileType = file.type;
+        const reader = new FileReader();
+
+        reader.onload = function(evt) {
+            selectedFileData = evt.target.result;
+            
+            const previewBox = document.getElementById("file-preview");
+            const previewImg = document.getElementById("preview-img");
+            const previewIcon = document.getElementById("preview-icon");
+            const fileInfo = document.getElementById("file-info");
+
+            fileInfo.innerText = file.name;
+            previewBox.style.display = "flex";
+
+            if (file.type.startsWith("image/")) {
+                previewImg.src = selectedFileData;
+                previewImg.style.display = "block";
+                previewIcon.style.display = "none";
+            } else {
+                previewImg.style.display = "none";
+                previewIcon.style.display = "block";
+            }
+        };
+
+        reader.readAsDataURL(file);
+    }
+
+    function clearSelectedFile() {
+        selectedFileData = null;
+        selectedFileType = null;
+        document.getElementById("file-input").value = "";
+        document.getElementById("file-preview").style.display = "none";
+    }
+
+    function appendMessageToDOM(sender, text, fileData = null) {
+        let body = document.getElementById("chat-body");
+        let typing = document.getElementById("typing");
 
         let msgDiv = document.createElement("div");
         msgDiv.className = `msg ${sender}`;
-        msgDiv.innerHTML = text.replace(/\n/g, '<br>');
+
+        if (fileData) {
+            if (fileData.startsWith("data:image/")) {
+                let img = document.createElement("img");
+                img.src = fileData;
+                msgDiv.appendChild(img);
+            } else {
+                let fileTag = document.createElement("div");
+                fileTag.style.fontSize = "12px";
+                fileTag.style.opacity = "0.8";
+                fileTag.innerHTML = `<i class="fa-solid fa-paperclip"></i> [Əlavə olunmuş fayl]`;
+                msgDiv.appendChild(fileTag);
+            }
+        }
+
+        if (text) {
+            let txtSpan = document.createElement("span");
+            txtSpan.innerHTML = text.replace(/\n/g, '<br>');
+            msgDiv.appendChild(txtSpan);
+        }
 
         if (sender === 'bot') {
             let speakBtn = document.createElement("button");
@@ -284,21 +324,28 @@
         let typing = document.getElementById("typing");
         let text = textOverride || input.value.trim();
 
-        if (!text) return;
+        if (!text && !selectedFileData) return;
 
         let session = allSessions.find(s => s.id === currentSessionId);
         if (!session) return;
 
         if (session.messages.length === 0) {
-            session.title = text.slice(0, 25) + (text.length > 25 ? "..." : "");
+            session.title = (text || "Fayl/Şəkil").slice(0, 25);
             renderSidebar();
         }
 
-        appendMessageToDOM("user", text);
-        session.messages.push({ sender: "user", text });
+        appendMessageToDOM("user", text, selectedFileData);
+        session.messages.push({ sender: "user", text, fileData: selectedFileData });
         saveSessions();
 
+        let reqPayload = {
+            message: text,
+            file_data: selectedFileData,
+            file_type: selectedFileType
+        };
+
         if (!textOverride) input.value = "";
+        clearSelectedFile();
 
         typing.style.display = "block";
         let body = document.getElementById("chat-body");
@@ -308,7 +355,7 @@
             let res = await fetch("/chat", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({message: text})
+                body: JSON.stringify(reqPayload)
             });
 
             let data = await res.json();
@@ -323,8 +370,6 @@
             appendMessageToDOM("bot", "Xəta baş verdi, xahiş olunur yenidən cəhd edin.");
         }
     }
-
-    function quickSend(text) { sendMessage(text); }
 
     /* Google Login */
     function parseJwt(token) {
@@ -369,16 +414,17 @@
         document.getElementById("google-btn-container").style.display = "block";
     }
 
-    /* Səs rejimi */
+    /* Səs Tanıma (Mikrofon Həlli) */
     let recognition;
     function toggleVoice() {
         let micBtn = document.getElementById("mic-btn");
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            alert("Brauzeriniz səs tanıma funksiyasını dəstəkləmir.");
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert("Brauzeriniz səs tanıma funksiyasını dəstəkləmir. Chrome və ya Edge istifadə edin.");
             return;
         }
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (recognition && micBtn.classList.contains("recording")) {
             recognition.stop();
             micBtn.classList.remove("recording");
@@ -386,8 +432,10 @@
         }
 
         recognition = new SpeechRecognition();
-        recognition.start();
+        recognition.lang = 'az-AZ'; // Azərbaycan dili dəstəyi
+        recognition.interimResults = false;
 
+        recognition.start();
         micBtn.classList.add("recording");
 
         recognition.onresult = (event) => {
@@ -397,7 +445,12 @@
             sendMessage();
         };
 
-        recognition.onerror = () => micBtn.classList.remove("recording");
+        recognition.onerror = (e) => {
+            console.error("Səs xətası:", e);
+            micBtn.classList.remove("recording");
+            alert("Səs tanınmadı və ya mikrofona icazə verilmədi.");
+        };
+
         recognition.onend = () => micBtn.classList.remove("recording");
     }
 
