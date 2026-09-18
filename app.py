@@ -1,9 +1,8 @@
 import os
-import time
 import base64
 from flask import Flask, render_template, request, jsonify
-import google.generativeai as genai
-from google.api_core.exceptions import ServiceUnavailable, GoogleAPIError
+from google import genai
+from google.genai import types
 
 app = Flask(__name__)
 
@@ -11,35 +10,30 @@ app = Flask(__name__)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    # Initialize the new Google GenAI client
+    client = genai.Client(api_key=GEMINI_API_KEY)
     
     # System instruction for Zaza AI Helper
     system_instruction = "You are Zaza AI Helper, a helpful and smart AI assistant."
     
-    # Updated model name to gemini-1.5-flash
-    model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash',
+    # Updated config for the new SDK
+    config = types.GenerateContentConfig(
         system_instruction=system_instruction
     )
 else:
-    model = None
+    client = None
 
 def get_ai_response(contents):
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            response = model.generate_content(contents)
-            return response.text, 200
-        except ServiceUnavailable:
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)  # Waits 1s, 2s, etc. before retrying
-                continue
-            else:
-                return "The system is currently experiencing high demand. Please try again in a few seconds.", 503
-        except GoogleAPIError as e:
-            return f"API Error encountered: {str(e)}", 500
-        except Exception as e:
-            return f"An unexpected error occurred: {str(e)}", 500
+    try:
+        # Using gemini-2.5-flash model with the new SDK
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=contents,
+            config=config
+        )
+        return response.text, 200
+    except Exception as e:
+        return f"API Error encountered: {str(e)}", 500
 
 @app.route('/')
 def home():
@@ -47,7 +41,7 @@ def home():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    if not model:
+    if not client:
         return jsonify({"response": "API Key is not configured. Please check your GEMINI_API_KEY environment variable."}), 500
 
     data = request.json or {}
@@ -64,10 +58,12 @@ def chat():
                 file_data = file_data.split(',')[1]
             
             raw_bytes = base64.b64decode(file_data)
-            contents.append({
-                "mime_type": file_type,
-                "data": raw_bytes
-            })
+            contents.append(
+                types.Part.from_bytes(
+                    data=raw_bytes,
+                    mime_type=file_type
+                )
+            )
         except Exception as e:
             print(f"File processing error: {e}")
 
