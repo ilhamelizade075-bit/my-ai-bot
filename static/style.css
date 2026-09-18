@@ -2,3 +2,43 @@ body, .app-container {
     height: 100vh;
     height: 100dvh;
 }
+
+/* Mobil Ekrana Uyğunlaşdırma */
+@media (max-width: 768px) {
+    body {
+        padding: 0;
+        margin: 0;
+        height: 100dvh;
+    }
+
+    .main-container {
+        width: 100% !important;
+        height: 100dvh !important;
+        max-width: 100% !important;
+        border-radius: 0 !important;
+        border: none !important;
+        flex-direction: column;
+    }
+
+    .sidebar {
+        display: none; 
+    }
+
+    .chat-card {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .msg {
+        max-width: 90% !important;
+        font-size: 16px !important;
+    }
+
+    .input-area {
+        padding: 10px !important;
+    }
+
+    .input-area input[type="text"] {
+        font-size: 16px !important;
+    }
+}
