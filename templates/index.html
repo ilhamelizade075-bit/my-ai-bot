@@ -1,22 +1,32 @@
 <!DOCTYPE html>
-<html lang="az">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zaza AI Helper</title>
     <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#10a37f">
-    <!-- Socket.IO Kitabxanası -->
+    <meta name="theme-color" content="#202123">
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        body { background: #343541; color: #ececf1; height: 100vh; display: flex; flex-direction: column; }
-        header { background: #202123; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #4d4d4f; }
-        .header-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .header-actions { display: flex; gap: 8px; }
-        button.btn-icon { background: transparent; border: 1px solid #565869; color: #ececf1; border-radius: 6px; padding: 6px 10px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+        body { background: #343541; color: #ececf1; height: 100vh; display: flex; overflow: hidden; }
+        
+        /* Sidebar Styles */
+        #sidebar { width: 260px; background: #202123; display: flex; flex-direction: column; padding: 10px; border-right: 1px solid #4d4d4f; }
+        .new-chat-btn { background: transparent; border: 1px solid #565869; color: #fff; padding: 10px; border-radius: 6px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 10px; font-size: 14px; margin-bottom: 10px; }
+        .new-chat-btn:hover { background: #2a2b32; }
+        #history-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+        .history-item { padding: 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: #c5c5d2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .history-item:hover, .history-item.active { background: #343541; color: #fff; }
+
+        /* Main Content Area */
+        #main-content { flex: 1; display: flex; flex-direction: column; height: 100vh; }
+        header { background: #343541; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #4d4d4f; }
+        .header-title { font-size: 16px; font-weight: 600; }
+        button.btn-icon { background: transparent; border: 1px solid #565869; color: #ececf1; border-radius: 6px; padding: 6px 12px; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
         button.btn-icon:hover { background: #40414f; }
         button.btn-icon.active { background: #10a37f; border-color: #10a37f; color: #fff; }
+
         #chat-container { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
         .message { display: flex; gap: 12px; max-width: 800px; margin: 0 auto; width: 100%; padding: 12px; border-radius: 8px; }
         .message.user { background: #343541; }
@@ -25,78 +35,114 @@
         .user .avatar { background: #5436da; }
         .bot .avatar { background: #10a37f; }
         .content { font-size: 15px; line-height: 1.5; word-break: break-word; flex: 1; }
-        .media-preview-container { display: flex; align-items: center; gap: 8px; background: #202123; padding: 8px 12px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
-        .media-preview-container img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
-        footer { background: #202123; padding: 12px 16px; border-top: 1px solid #4d4d4f; }
+
+        footer { background: #343541; padding: 12px 16px; }
         .input-box { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
         .controls { display: flex; gap: 8px; align-items: center; background: #40414f; border-radius: 8px; padding: 8px 12px; }
         textarea { flex: 1; background: transparent; border: none; color: #fff; font-size: 15px; resize: none; outline: none; height: 24px; max-height: 150px; }
-        .input-btns { display: flex; gap: 6px; align-items: center; }
-        .input-btn { background: transparent; border: none; color: #acacbe; cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
-        .input-btn:hover { color: #fff; background: #202123; }
-        .input-btn.recording { color: #ef4444; animation: pulse 1.5s infinite; }
-        .live-status { text-align: center; font-size: 12px; color: #10a37f; padding: 4px; display: none; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .input-btn { background: transparent; border: none; color: #acacbe; cursor: pointer; padding: 4px; border-radius: 4px; }
+        .input-btn:hover { color: #fff; }
+        .media-preview-container { display: flex; align-items: center; gap: 8px; background: #202123; padding: 6px 12px; border-radius: 6px; font-size: 12px; }
+        .live-status { text-align: center; font-size: 12px; color: #10a37f; display: none; }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="header-title">
-            <span>🤖 Zaza AI Helper</span>
-        </div>
-        <div class="header-actions">
-            <button id="btn-live-voice" class="btn-icon" onclick="toggleLiveVoice()">
-                🎙️ Canlı Səs
-            </button>
-            <button class="btn-icon" onclick="newChat()">➕ Yeni Çat</button>
-        </div>
-    </header>
+    <!-- Left Sidebar -->
+    <div id="sidebar">
+        <button class="new-chat-btn" onclick="startNewChat()">➕ New Chat</button>
+        <div id="history-list"></div>
+    </div>
 
-    <div id="chat-container"></div>
+    <!-- Main Content Area -->
+    <div id="main-content">
+        <header>
+            <div class="header-title">🤖 Zaza AI Helper</div>
+            <button id="btn-live-voice" class="btn-icon" onclick="toggleLiveVoice()">🎙️ Live Voice</button>
+        </header>
 
-    <footer>
-        <div class="input-box">
-            <div id="media-preview" class="media-preview-container" style="display:none;">
-                <span id="preview-text"></span>
-                <button onclick="clearMedia()" style="background:none; border:none; color:#ef4444; cursor:pointer; margin-left:auto;">❌</button>
-            </div>
-            <div id="live-indicator" class="live-status">🔴 Canlı Səs Xətti Aktivdir (Danışa bilərsiniz)</div>
-            <div class="controls">
-                <label for="file-input" class="input-btn" title="Fayl yüklə">📎</label>
-                <input type="file" id="file-input" style="display:none;" onchange="handleFileSelect(event)">
-                
-                <textarea id="user-input" placeholder="Zaza-ya mesaj yazın..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
-                
-                <div class="input-btns">
+        <div id="chat-container"></div>
+
+        <footer>
+            <div class="input-box">
+                <div id="media-preview" class="media-preview-container" style="display:none;">
+                    <span id="preview-text"></span>
+                    <button onclick="clearMedia()" style="background:none; border:none; color:#ef4444; cursor:pointer; margin-left:auto;">❌</button>
+                </div>
+                <div id="live-indicator" class="live-status">🔴 Live Voice Active</div>
+                <div class="controls">
+                    <label for="file-input" class="input-btn" title="Attach File">📎</label>
+                    <input type="file" id="file-input" style="display:none;" onchange="handleFileSelect(event)">
+                    
+                    <textarea id="user-input" placeholder="Message Zaza..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+                    
                     <button class="input-btn" onclick="sendMessage()">➔</button>
                 </div>
             </div>
-        </div>
-    </footer>
+        </footer>
+    </div>
 
     <script>
         const socket = io();
+        let chats = JSON.parse(localStorage.getItem('zaza_chats') || '[]');
+        let currentChatId = null;
         let selectedFileBase64 = null;
         let selectedFileType = null;
         let isLiveVoiceActive = false;
-        let mediaStream = null;
-        let audioContext = null;
-        let processor = null;
 
-        // Socket bağlantı dinləyiciləri
-        socket.on('connect', () => {
-            console.log("WebSocket bağlantısı quruldu.");
-        });
+        function init() {
+            renderHistory();
+            if (chats.length > 0) {
+                loadChat(chats[0].id);
+            } else {
+                startNewChat();
+            }
+        }
 
-        function appendMessage(sender, text) {
+        function saveChats() {
+            localStorage.setItem('zaza_chats', JSON.stringify(chats));
+            renderHistory();
+        }
+
+        function startNewChat() {
+            currentChatId = Date.now().toString();
+            chats.unshift({ id: currentChatId, title: "New Chat", messages: [] });
+            saveChats();
+            loadChat(currentChatId);
+        }
+
+        function loadChat(id) {
+            currentChatId = id;
+            const chat = chats.find(c => c.id === id);
+            const container = document.getElementById('chat-container');
+            container.innerHTML = '';
+            
+            if (chat) {
+                chat.messages.forEach(m => appendMessageToDOM(m.sender, m.text));
+            }
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            chats.forEach(c => {
+                const item = document.createElement('div');
+                item.className = `history-item ${c.id === currentChatId ? 'active' : ''}`;
+                item.innerText = c.title || "New Chat";
+                item.onclick = () => loadChat(c.id);
+                list.appendChild(item);
+            });
+        }
+
+        function appendMessageToDOM(sender, text) {
             const container = document.getElementById('chat-container');
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${sender}`;
             
             const avatar = document.createElement('div');
             avatar.className = 'avatar';
-            avatar.innerText = sender === 'user' ? 'Sən' : 'Zaza';
+            avatar.innerText = sender === 'user' ? 'You' : 'Zaza';
 
             const content = document.createElement('div');
             content.className = 'content';
@@ -113,14 +159,18 @@
             const text = input.value.trim();
             if (!text && !selectedFileBase64) return;
 
-            appendMessage('user', text || "[Fayl göndərildi]");
-            input.value = '';
+            appendMessageToDOM('user', text || "[File Sent]");
+            
+            const currentChat = chats.find(c => c.id === currentChatId);
+            if (currentChat) {
+                if (currentChat.messages.length === 0 && text) {
+                    currentChat.title = text.substring(0, 20) + "...";
+                }
+                currentChat.messages.push({ sender: 'user', text: text || "[File Sent]" });
+            }
 
-            const payload = {
-                message: text,
-                file_data: selectedFileBase64,
-                file_type: selectedFileType
-            };
+            input.value = '';
+            const payload = { message: text, file_data: selectedFileBase64, file_type: selectedFileType };
             clearMedia();
 
             try {
@@ -130,9 +180,14 @@
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                appendMessage('bot', data.response);
+                
+                appendMessageToDOM('bot', data.response);
+                if (currentChat) {
+                    currentChat.messages.push({ sender: 'bot', text: data.response });
+                    saveChats();
+                }
             } catch (err) {
-                appendMessage('bot', "Xəta baş verdi, yenidən cəhd edin.");
+                appendMessageToDOM('bot', "An error occurred, please try again.");
             }
         }
 
@@ -146,12 +201,11 @@
         function handleFileSelect(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             selectedFileType = file.type;
             const reader = new FileReader();
             reader.onload = function(evt) {
                 selectedFileBase64 = evt.target.result;
-                document.getElementById('preview-text').innerText = `Fayl: ${file.name}`;
+                document.getElementById('preview-text').innerText = `File: ${file.name}`;
                 document.getElementById('media-preview').style.display = 'flex';
             };
             reader.readAsDataURL(file);
@@ -164,37 +218,28 @@
             document.getElementById('media-preview').style.display = 'none';
         }
 
-        function newChat() {
-            document.getElementById('chat-container').innerHTML = '';
-        }
-
-        // ChatGPT stili CANLI SƏS REJİMİ
         async function toggleLiveVoice() {
             const btn = document.getElementById('btn-live-voice');
             const indicator = document.getElementById('live-indicator');
-
             if (!isLiveVoiceActive) {
                 try {
-                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    
+                    await navigator.mediaDevices.getUserMedia({ audio: true });
                     btn.classList.add('active');
                     indicator.style.display = 'block';
                     isLiveVoiceActive = true;
-                    appendMessage('bot', "🎙️ Canlı səs rejimi aktivləşdirildi. Danışa bilərsiniz!");
+                    appendMessageToDOM('bot', "🎙️ Live Voice mode activated.");
                 } catch (err) {
-                    alert("Mikrofon icazəsi verilmedi!");
+                    alert("Microphone permission denied!");
                 }
             } else {
-                if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
-                if (audioContext) audioContext.close();
-                
                 btn.classList.remove('active');
                 indicator.style.display = 'none';
                 isLiveVoiceActive = false;
-                appendMessage('bot', "🛑 Canlı səs rejimi dayandırıldı.");
+                appendMessageToDOM('bot', "🛑 Live Voice mode stopped.");
             }
         }
+
+        init();
     </script>
 </body>
 </html>
