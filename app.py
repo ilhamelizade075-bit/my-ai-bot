@@ -23,6 +23,24 @@ if GEMINI_API_KEY:
 else:
     model = None
 
+# Sizin soruşduğunuz funksiyanın tam tətbiq olunmuş forması
+def get_ai_response(contents):
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = model.generate_content(contents)
+            return response.text, 200
+        except ServiceUnavailable:
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)  # Waits 1s, 2s, etc. before retrying
+                continue
+            else:
+                return "The system is currently experiencing high demand. Please try again in a few seconds.", 503
+        except GoogleAPIError as e:
+            return f"API Error encountered: {str(e)}", 500
+        except Exception as e:
+            return f"An unexpected error occurred: {str(e)}", 500
+
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -59,27 +77,9 @@ def chat():
     if not contents:
         return jsonify({"response": "Please provide a message or an attachment."}), 400
 
-    # Automatic retry mechanism for 503 UNAVAILABLE service spikes
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            response = model.generate_content(contents)
-            return jsonify({"response": response.text})
-            
-        except ServiceUnavailable:
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
-                continue
-            else:
-                return jsonify({
-                    "response": "Google AI servers are currently experiencing high demand (503). Please try again in a few moments."
-                })
-                
-        except GoogleAPIError as e:
-            return jsonify({"response": f"API Error encountered: {str(e)}"}), 500
-            
-        except Exception as e:
-            return jsonify({"response": f"An unexpected error occurred: {str(e)}"}), 500
+    # AI cavabını funksiya vasitəsilə alırıq
+    ai_response_text, status_code = get_ai_response(contents)
+    return jsonify({"response": ai_response_text}), status_code
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
