@@ -29,6 +29,13 @@
         header { background: #343541; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #4d4d4f; }
         .header-title { font-size: 16px; font-weight: 600; }
 
+        /* Search Input in Header Right Side */
+        .search-box { position: relative; display: flex; align-items: center; }
+        .search-box input { background: #40414f; border: 1px solid #565869; color: #fff; border-radius: 6px; padding: 6px 10px 6px 28px; font-size: 13px; outline: none; width: 180px; transition: width 0.3s; }
+        .search-box input:focus { width: 220px; border-color: #10a37f; }
+        .search-box input::placeholder { color: #8e8ea0; }
+        .search-icon { position: absolute; left: 8px; font-size: 12px; color: #8e8ea0; pointer-events: none; }
+
         #chat-container { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
         .message { display: flex; gap: 12px; max-width: 800px; margin: 0 auto; width: 100%; padding: 12px; border-radius: 8px; }
         .message.user { background: #343541; }
@@ -70,6 +77,11 @@
     <div id="main-content">
         <header>
             <div class="header-title">🤖 Zaza AI Helper</div>
+            <!-- Search Input Added on the Right -->
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-chats-input" placeholder="Search chats..." oninput="filterChats(this.value)">
+            </div>
         </header>
 
         <div id="chat-container"></div>
@@ -145,10 +157,12 @@
             }
         }
 
-        function renderHistory() {
+        function renderHistory(filteredChats = null) {
             const list = document.getElementById('history-list');
             list.innerHTML = '';
-            chats.forEach(c => {
+            const listToRender = filteredChats !== null ? filteredChats : chats;
+
+            listToRender.forEach(c => {
                 const item = document.createElement('div');
                 item.className = `history-item ${c.id === currentChatId ? 'active' : ''}`;
                 item.onclick = () => loadChat(c.id);
@@ -167,6 +181,19 @@
                 item.appendChild(delBtn);
                 list.appendChild(item);
             });
+        }
+
+        function filterChats(query) {
+            const searchQuery = query.toLowerCase().trim();
+            if (!searchQuery) {
+                renderHistory();
+                return;
+            }
+            const filtered = chats.filter(c => 
+                (c.title && c.title.toLowerCase().includes(searchQuery)) ||
+                c.messages.some(m => m.text && m.text.toLowerCase().includes(searchQuery))
+            );
+            renderHistory(filtered);
         }
 
         function appendMessageToDOM(sender, text) {
@@ -229,7 +256,6 @@
             const payload = { message: text, file_data: selectedFileBase64, file_type: selectedFileType };
             clearMedia();
 
-            // Show 3 dots animation
             const typingMsgElement = createTypingIndicator();
 
             try {
@@ -240,10 +266,7 @@
                 });
                 const data = await res.json();
                 
-                // Remove typing indicator animation
                 typingMsgElement.remove();
-
-                // Append actual text response
                 appendMessageToDOM('bot', data.response);
 
                 if (currentChat) {
