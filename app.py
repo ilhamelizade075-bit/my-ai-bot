@@ -16,9 +16,9 @@ if GEMINI_API_KEY:
     # System instruction for Zaza AI Helper
     system_instruction = "You are Zaza AI Helper, a helpful and smart AI assistant."
     
-    # Updated model name to gemini-1.5-flash-latest
+    # Updated model name to gemini-1.5-flash
     model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash-latest',
+        model_name='gemini-1.5-flash',
         system_instruction=system_instruction
     )
 else:
