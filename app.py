@@ -16,7 +16,6 @@ client = genai.Client(api_key=api_key)
 def index():
     return render_template("index.html")
 
-# Standart metn/fayl çatı üçün
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.json or {}
@@ -25,7 +24,7 @@ def chat():
     file_type = data.get("file_type", None)
 
     if not user_message and not file_data:
-        return jsonify({"response": "Xahiş olunur mesaj yazın və ya fayl əlavə edin."})
+        return jsonify({"response": "Please enter a message or attach a file."})
 
     contents = []
     
@@ -39,28 +38,27 @@ def chat():
                 )
             )
         except Exception as e:
-            return jsonify({"response": f"Fayl emal edilərkən xəta baş verdi: {str(e)}"})
+            return jsonify({"response": f"Error processing file: {str(e)}"})
 
     if user_message:
         contents.append(user_message)
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.6-flash",
             contents=contents,
         )
         return jsonify({"response": response.text})
     except Exception as e:
-        return jsonify({"response": f"Xəta baş verdi: {str(e)}"})
+        return jsonify({"response": f"Error: {str(e)}"})
 
-# WebSocket - Canlı Səs Sessiyası
 @socketio.on('connect')
 def handle_connect():
-    print("İstifadəçi canlı səs xəttinə qoşuldu.")
+    print("User connected to live voice channel.")
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    print("İstifadəçi səs xəttindən ayrıldı.")
+    print("User disconnected from live voice channel.")
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000, debug=True)
