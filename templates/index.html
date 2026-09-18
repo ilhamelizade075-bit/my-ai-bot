@@ -44,16 +44,8 @@
         textarea { flex: 1; background: transparent; border: none; color: #fff; font-size: 15px; resize: none; outline: none; height: 24px; max-height: 150px; }
         .input-btn { background: transparent; border: none; color: #acacbe; cursor: pointer; padding: 4px; border-radius: 4px; font-size: 16px; }
         .input-btn:hover { color: #fff; }
-        .input-btn.recording { color: #ef4444; animation: pulse 1s infinite; }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
 
         .media-preview-container { display: flex; align-items: center; gap: 8px; background: #202123; padding: 6px 12px; border-radius: 6px; font-size: 12px; }
-        .listening-status { text-align: center; font-size: 12px; color: #ef4444; display: none; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -78,16 +70,12 @@
                     <span id="preview-text"></span>
                     <button onclick="clearMedia()" style="background:none; border:none; color:#ef4444; cursor:pointer; margin-left:auto;">❌</button>
                 </div>
-                <div id="listening-indicator" class="listening-status">🔴 Listening... Speak now</div>
                 <div class="controls">
                     <label for="file-input" class="input-btn" title="Attach File">📎</label>
                     <input type="file" id="file-input" style="display:none;" onchange="handleFileSelect(event)">
                     
                     <textarea id="user-input" placeholder="Message Zaza..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
                     
-                    <!-- Voice Typing Button -->
-                    <button id="mic-btn" class="input-btn" onclick="toggleVoiceInput()" title="Voice Input">🎙️</button>
-
                     <button class="input-btn" onclick="sendMessage()" title="Send">➔</button>
                 </div>
             </div>
@@ -99,70 +87,6 @@
         let currentChatId = null;
         let selectedFileBase64 = null;
         let selectedFileType = null;
-        let isRecording = false;
-
-        // Web Speech API Setup
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition = null;
-
-        if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.continuous = false; // Stop when speech finishes
-            recognition.interimResults = true; // Show text while speaking
-            recognition.lang = 'en-US';
-
-            recognition.onresult = (event) => {
-                let transcript = '';
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    transcript += event.results[i][0].transcript;
-                }
-                document.getElementById('user-input').value = transcript;
-            };
-
-            recognition.onerror = (event) => {
-                console.error("Speech Recognition Error:", event.error);
-                stopRecordingUI();
-                if (event.error === 'not-allowed') {
-                    alert("Microphone permission denied! Please allow access in browser settings.");
-                }
-            };
-
-            recognition.onend = () => {
-                stopRecordingUI();
-                const inputVal = document.getElementById('user-input').value.trim();
-                if (inputVal) {
-                    sendMessage(); // Auto-send as text
-                }
-            };
-        }
-
-        function toggleVoiceInput() {
-            if (!recognition) {
-                alert("Speech recognition is not supported in this browser. Please use Chrome.");
-                return;
-            }
-
-            if (!isRecording) {
-                try {
-                    document.getElementById('user-input').value = '';
-                    recognition.start();
-                    isRecording = true;
-                    document.getElementById('mic-btn').classList.add('recording');
-                    document.getElementById('listening-indicator').style.display = 'block';
-                } catch (e) {
-                    console.error(e);
-                }
-            } else {
-                recognition.stop();
-                stopRecordingUI();
-            }
-        }
-
-        function stopRecordingUI() {
-            isRecording = false;
-            document.getElementById('mic-btn').classList.remove('recording');
-            document.getElementById('listening-indicator').style.display = 'none';
-        }
 
         function init() {
             renderHistory();
@@ -198,7 +122,7 @@
         }
 
         function deleteChat(event, id) {
-            event.stopPropagation(); // Prevent chat switching when clicking delete
+            event.stopPropagation();
             chats = chats.filter(c => c.id !== id);
             saveChats();
 
