@@ -1,66 +1,86 @@
 import os
+import time
 import base64
 from flask import Flask, render_template, request, jsonify
-from flask_socketio import SocketIO, emit
-from google import genai
-from google.genai import types
+import google.generativeai as genai
+from google.api_core.exceptions import ServiceUnavailable, GoogleAPIError
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'zaza_live_secret!'
-socketio = SocketIO(app, cors_allowed_origins="*")
 
-api_key = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=api_key)
+# Fetch Gemini API Key from environment variables
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    
+    # System instruction for Zaza AI Helper
+    system_instruction = "You are Zaza AI Helper, a helpful and smart AI assistant."
+    
+    model = genai.GenerativeModel(
+        model_name='gemini-1.5-flash',
+        system_instruction=system_instruction
+    )
+else:
+    model = None
 
-# Standard chat route
-@app.route("/chat", methods=["POST"])
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/chat', methods=['POST'])
 def chat():
-    data = request.json or {}
-    user_message = data.get("message", "")
-    file_data = data.get("file_data", None)
-    file_type = data.get("file_type", None)
+    if not model:
+        return jsonify({"response": "API Key is not configured. Please check your GEMINI_API_KEY environment variable."}), 500
 
-    if not user_message and not file_data:
-        return jsonify({"response": "Please enter a message or attach a file."})
+    data = request.json or {}
+    user_message = data.get('message', '')
+    file_data = data.get('file_data')
+    file_type = data.get('file_type')
 
     contents = []
-    
+
+    # Process attachment if present
     if file_data and file_type:
         try:
-            raw_bytes = base64.b64decode(file_data.split(",")[1] if "," in file_data else file_data)
-            contents.append(
-                types.Part.from_bytes(
-                    data=raw_bytes,
-                    mime_type=file_type
-                )
-            )
+            if ',' in file_data:
+                file_data = file_data.split(',')[1]
+            
+            raw_bytes = base64.b64decode(file_data)
+            contents.append({
+                "mime_type": file_type,
+                "data": raw_bytes
+            })
         except Exception as e:
-            return jsonify({"response": f"Error processing file: {str(e)}"})
+            print(f"File processing error: {e}")
 
     if user_message:
         contents.append(user_message)
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=contents,
-        )
-        return jsonify({"response": response.text})
-    except Exception as e:
-        return jsonify({"response": f"Error: {str(e)}"})
+    if not contents:
+        return jsonify({"response": "Please provide a message or an attachment."}), 400
 
-# WebSocket connection for live voice stream
-@socketio.on('connect')
-def handle_connect():
-    print("User connected to live voice channel.")
+    # Automatic retry mechanism for 503 UNAVAILABLE service spikes
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = model.generate_content(contents)
+            return jsonify({"response": response.text})
+            
+        except ServiceUnavailable:
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)
+                continue
+            else:
+                return jsonify({
+                    "response": "Google AI servers are currently experiencing high demand (503). Please try again in a few moments."
+                })
+                
+        except GoogleAPIError as e:
+            return jsonify({"response": f"API Error encountered: {str(e)}"}), 500
+            
+        except Exception as e:
+            return jsonify({"response": f"An unexpected error occurred: {str(e)}"}), 500
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    print("User disconnected from live voice channel.")
-
-if __name__ == "__main__":
-    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
