@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="az">
-<head><link rel="manifest" href="/static/manifest.json">
+<head>
+    <link rel="manifest" href="/static/manifest.json">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Zaza AI Helper</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: radial-gradient(circle at top left, #1a1c29, #0e0f17); color: #e1e1e6; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        body { background: radial-gradient(circle at top left, #1a1c29, #0e0f17); color: #e1e1e6; height: 100vh; height: 100dvh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         
         .main-container { width: 95%; max-width: 1200px; height: 90vh; background: rgba(23, 25, 35, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; display: flex; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
         
@@ -70,6 +71,17 @@
         .send-btn { background: linear-gradient(135deg, #7928CA, #FF0080); border: none; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* Mobil Ekran Uyğunlaşdırması */
+        @media (max-width: 768px) {
+            body { padding: 0; margin: 0; height: 100dvh; }
+            .main-container { width: 100% !important; height: 100dvh !important; max-width: 100% !important; border-radius: 0 !important; border: none !important; flex-direction: column; }
+            .sidebar { display: none; }
+            .chat-card { width: 100% !important; height: 100% !important; }
+            .msg { max-width: 90% !important; font-size: 16px !important; }
+            .input-area { padding: 10px !important; }
+            .input-area input[type="text"] { font-size: 16px !important; }
+        }
     </style>
 </head>
 <body>
@@ -128,7 +140,7 @@
             </button>
 
             <input type="text" id="user-input" placeholder="Mesajınızı yazın...">
-            <button class="action-btn" id="mic-btn" onclick="toggleVoice()" title="Səslə Yaz"><i class="fa-solid fa-microphone"></i></button>
+            <button class="action-btn" id="mic-btn" onclick="toggleVoice()" title="Səsli Danışıq"><i class="fa-solid fa-microphone"></i></button>
             <button class="action-btn send-btn" onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
     </div>
@@ -139,6 +151,7 @@
     let currentSessionId = localStorage.getItem("currentSessionId") || null;
     let selectedFileData = null;
     let selectedFileType = null;
+    let isVoiceMode = false; // Səsli dialoq rejimi bayrağı
 
     window.onload = () => {
         checkSavedUser();
@@ -365,6 +378,11 @@
             session.messages.push({ sender: "bot", text: data.response });
             saveSessions();
 
+            // Əgər səsli rejim aktivdirsə, cavabı səsli oxu
+            if (isVoiceMode) {
+                speakText(data.response);
+            }
+
         } catch (e) {
             typing.style.display = "none";
             appendMessageToDOM("bot", "Xəta baş verdi, xahiş olunur yenidən cəhd edin.");
@@ -414,7 +432,7 @@
         document.getElementById("google-btn-container").style.display = "block";
     }
 
-    /* Səs Tanıma (Mikrofon Həlli) */
+    /* Canlı Səsli Dialoq Rejimi */
     let recognition;
     function toggleVoice() {
         let micBtn = document.getElementById("mic-btn");
@@ -425,38 +443,64 @@
             return;
         }
 
-        if (recognition && micBtn.classList.contains("recording")) {
-            recognition.stop();
-            micBtn.classList.remove("recording");
-            return;
-        }
+        isVoiceMode = !isVoiceMode;
 
+        if (isVoiceMode) {
+            micBtn.classList.add("recording");
+            startListening();
+        } else {
+            isVoiceMode = false;
+            micBtn.classList.remove("recording");
+            if (recognition) recognition.stop();
+            window.speechSynthesis.cancel();
+        }
+    }
+
+    function startListening() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRecognition();
-        recognition.lang = 'az-AZ'; // Azərbaycan dili dəstəyi
+        recognition.lang = 'az-AZ';
         recognition.interimResults = false;
 
         recognition.start();
-        micBtn.classList.add("recording");
 
         recognition.onresult = (event) => {
             let transcript = event.results[0][0].transcript;
             document.getElementById("user-input").value = transcript;
-            micBtn.classList.remove("recording");
             sendMessage();
         };
 
         recognition.onerror = (e) => {
             console.error("Səs xətası:", e);
-            micBtn.classList.remove("recording");
-            alert("Səs tanınmadı və ya mikrofona icazə verilmədi.");
+            let micBtn = document.getElementById("mic-btn");
+            if (isVoiceMode) {
+                setTimeout(() => startListening(), 1000);
+            } else {
+                micBtn.classList.remove("recording");
+            }
         };
 
-        recognition.onend = () => micBtn.classList.remove("recording");
+        recognition.onend = () => {
+            if (!isVoiceMode) {
+                document.getElementById("mic-btn").classList.remove("recording");
+            }
+        };
     }
 
     function speakText(text) {
         let synth = window.speechSynthesis;
+        synth.cancel(); // Mətnin təkrarlanmaması üçün köhnə səsi sıfırla
+
         let utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'az-AZ';
+
+        // Bot danışıb bitirdikdən sonra səsli rejim aktivdirsə, yenidən dinləməyə başlasın
+        utterance.onend = () => {
+            if (isVoiceMode) {
+                setTimeout(() => startListening(), 500);
+            }
+        };
+
         synth.speak(utterance);
     }
 </script>
