@@ -1,2 +1,4 @@
 flask
+flask-socketio
 google-genai
+eventlet
