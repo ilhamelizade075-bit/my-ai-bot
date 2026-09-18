@@ -16,6 +16,7 @@ client = genai.Client(api_key=api_key)
 def index():
     return render_template("index.html")
 
+# Standard chat route
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.json or {}
@@ -52,6 +53,7 @@ def chat():
     except Exception as e:
         return jsonify({"response": f"Error: {str(e)}"})
 
+# WebSocket connection for live voice stream
 @socketio.on('connect')
 def handle_connect():
     print("User connected to live voice channel.")
