@@ -16,7 +16,7 @@ if GEMINI_API_KEY:
     # System instruction for Zaza AI Helper
     system_instruction = "You are Zaza AI Helper, a helpful and smart AI assistant."
     
-    # Updated config for the new SDK
+    # Configuration for Gemini 2.5
     config = types.GenerateContentConfig(
         system_instruction=system_instruction
     )
@@ -25,7 +25,7 @@ else:
 
 def get_ai_response(contents):
     try:
-        # Using gemini-2.5-flash model with the new SDK
+        # Updated to gemini-2.5-flash with official Google GenAI SDK
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=contents,
