@@ -1,4 +1,5 @@
 import os
+import time
 import base64
 from flask import Flask, render_template, request, jsonify
 from google import genai
@@ -24,16 +25,31 @@ else:
     client = None
 
 def get_ai_response(contents):
-    try:
-        # Updated model name to gemini-3.8-flash
-        response = client.models.generate_content(
-            model='gemini-3.8-flash',
-            contents=contents,
-            config=config
-        )
-        return response.text, 200
-    except Exception as e:
-        return f"API Error encountered: {str(e)}", 500
+    # Try gemini-2.5-flash as default, fallback options if busy
+    models_to_try = ['gemini-2.5-flash', 'gemini-2.5-pro']
+    
+    for model_name in models_to_try:
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=config
+                )
+                return response.text, 200
+            except Exception as e:
+                err_str = str(e)
+                # If server is busy (503), wait and retry
+                if "503" in err_str or "UNAVAILABLE" in err_str:
+                    if attempt < max_retries - 1:
+                        time.sleep(2 ** attempt)  # Gözləmə müddəti: 1s, 2s...
+                        continue
+                else:
+                    # Alternative model attempt
+                    break
+                    
+    return "Serverdə hazırda çox böyük yüklənmə var. Xahiş olunur bir neçə saniyə sonra yenidən cəhd edin.", 503
 
 @app.route('/')
 def home():
