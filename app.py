@@ -25,31 +25,23 @@ else:
     client = None
 
 def get_ai_response(contents):
-    # Try gemini-2.5-flash as default, fallback options if busy
-    models_to_try = ['gemini-2.5-flash', 'gemini-2.5-pro']
-    
-    for model_name in models_to_try:
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=contents,
-                    config=config
-                )
-                return response.text, 200
-            except Exception as e:
-                err_str = str(e)
-                # If server is busy (503), wait and retry
-                if "503" in err_str or "UNAVAILABLE" in err_str:
-                    if attempt < max_retries - 1:
-                        time.sleep(2 ** attempt)  # Gözləmə müddəti: 1s, 2s...
-                        continue
-                else:
-                    # Alternative model attempt
-                    break
-                    
-    return "Serverdə hazırda çox böyük yüklənmə var. Xahiş olunur bir neçə saniyə sonra yenidən cəhd edin.", 503
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=contents,
+                config=config
+            )
+            return response.text, 200
+        except Exception as e:
+            # 503 və ya yüklənmə olduqda 1.5 saniyə gözləyib yenidən cəhd edir
+            if attempt < max_retries - 1:
+                time.sleep(1.5)
+                continue
+            else:
+                # Dəqiq xətanı ekranda görmək üçün reallıqda ne baş verdiyini qaytarırıq
+                return f"API Error: {str(e)}", 500
 
 @app.route('/')
 def home():
