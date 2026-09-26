@@ -25,12 +25,12 @@ else:
     client = None
 
 def get_ai_response(contents):
-    # Əsas və ehtiyat modellər siyahısı
-    models_to_try = ['gemini-3.8-flash', 'gemini-1.5-flash']
+    # İşlək və güncəl modellər: Əsas və Ehtiyat
+    models_to_try = ['gemini-3.8-flash', 'gemini-2.5-flash']
     
     last_error = ""
     for model_name in models_to_try:
-        max_retries = 2
+        max_retries = 3
         for attempt in range(max_retries):
             try:
                 response = client.models.generate_content(
@@ -41,15 +41,15 @@ def get_ai_response(contents):
                 return response.text, 200
             except Exception as e:
                 last_error = str(e)
-                # Əgər 503 (yüklənmə) xətası varsa 1 saniyə gözləyib təkrar cəhd edir
+                # 503 (yüklənmə) olduqda gözləyib təkrar cəhd edir
                 if ("503" in last_error or "UNAVAILABLE" in last_error) and attempt < max_retries - 1:
-                    time.sleep(1)
+                    time.sleep(1.5 * (attempt + 1))
                     continue
                 else:
-                    # Bu modeldə problem olduqda növbəti ehtiyat modelə keçir
+                    # Model 404 və ya başqa xəta versə dərhal növbəti ehtiyat modelə keçir
                     break
 
-    return f"Server hazırda həddindən artıq məşğuldur, zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin. (Xəta: {last_error})", 500
+    return "Serverdə pulsuz API sıxlığı var, zəhmət olmasa bir kaç saniyə sonra yenidən cəhd edin.", 503
 
 @app.route('/')
 def home():
