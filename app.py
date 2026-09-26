@@ -14,7 +14,7 @@ if GEMINI_API_KEY:
     # Initialize the official Google GenAI client
     client = genai.Client(api_key=GEMINI_API_KEY)
     
-    # Azərbaycan dilində cavab verməsi üçün sistem təlimatı
+    # System instruction for Zaza AI Helper
     system_instruction = "Sen Zaza AI Helper adlı köməkçisən. İstifadəçilərə həmişə səmimi, ağıllı və Azərbaycan dilində cavab ver."
     
     # Configuration for Gemini Model
@@ -25,23 +25,31 @@ else:
     client = None
 
 def get_ai_response(contents):
-    max_retries = 5  # Cəhd sayını 5-ə qaldırdıq
-    for attempt in range(max_retries):
-        try:
-            response = client.models.generate_content(
-                model='gemini-3.8-flash',
-                contents=contents,
-                config=config
-            )
-            return response.text, 200
-        except Exception as e:
-            err_str = str(e)
-            # 503 və ya UNAVAILABLE olduqda daha səbrlə gözləyirik (2s, 3s, 4s...)
-            if ("503" in err_str or "UNAVAILABLE" in err_str) and attempt < max_retries - 1:
-                time.sleep(2 + attempt)
-                continue
-            else:
-                return f"Server hazırda məşğuldur, zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin. (Xəta: {err_str})", 500
+    # Əsas və ehtiyat modellər siyahısı
+    models_to_try = ['gemini-3.8-flash', 'gemini-1.5-flash']
+    
+    last_error = ""
+    for model_name in models_to_try:
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=contents,
+                    config=config
+                )
+                return response.text, 200
+            except Exception as e:
+                last_error = str(e)
+                # Əgər 503 (yüklənmə) xətası varsa 1 saniyə gözləyib təkrar cəhd edir
+                if ("503" in last_error or "UNAVAILABLE" in last_error) and attempt < max_retries - 1:
+                    time.sleep(1)
+                    continue
+                else:
+                    # Bu modeldə problem olduqda növbəti ehtiyat modelə keçir
+                    break
+
+    return f"Server hazırda həddindən artıq məşğuldur, zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin. (Xəta: {last_error})", 500
 
 @app.route('/')
 def home():
