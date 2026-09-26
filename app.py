@@ -28,19 +28,18 @@ def get_ai_response(contents):
     max_retries = 3
     for attempt in range(max_retries):
         try:
+            # Updated to gemini-3.8-flash as requested by Google API
             response = client.models.generate_content(
-                model='gemini-2.5-flash',
+                model='gemini-3.8-flash',
                 contents=contents,
                 config=config
             )
             return response.text, 200
         except Exception as e:
-            # 503 və ya yüklənmə olduqda 1.5 saniyə gözləyib yenidən cəhd edir
             if attempt < max_retries - 1:
                 time.sleep(1.5)
                 continue
             else:
-                # Dəqiq xətanı ekranda görmək üçün reallıqda ne baş verdiyini qaytarırıq
                 return f"API Error: {str(e)}", 500
 
 @app.route('/')
