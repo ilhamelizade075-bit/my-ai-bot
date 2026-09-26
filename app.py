@@ -10,13 +10,13 @@ app = Flask(__name__)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 if GEMINI_API_KEY:
-    # Initialize the new Google GenAI client
+    # Initialize the official Google GenAI client
     client = genai.Client(api_key=GEMINI_API_KEY)
     
     # System instruction for Zaza AI Helper
     system_instruction = "You are Zaza AI Helper, a helpful and smart AI assistant."
     
-    # Configuration for Gemini 2.5
+    # Configuration for Gemini Model
     config = types.GenerateContentConfig(
         system_instruction=system_instruction
     )
@@ -25,9 +25,9 @@ else:
 
 def get_ai_response(contents):
     try:
-        # Updated to gemini-2.5-flash with official Google GenAI SDK
+        # Updated model name to gemini-3.8-flash
         response = client.models.generate_content(
-            model='gemini-2.5-flash',
+            model='gemini-3.8-flash',
             contents=contents,
             config=config
         )
